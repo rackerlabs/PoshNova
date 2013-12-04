@@ -21,15 +21,7 @@ CLB v1.0 API reference
 http://docs.rackspace.com/loadbalancers/api/v1.0/clb-devguide/content/Overview-d1e82.html
 
 Get-CloudLoadBalancerDetails
-Update-SSLTermination
-Add-SessionPersistence
-Update-SessionPersistence
-Add-ConnectionLogging
-Add-ConnectionThrottling
-Remove-ConnectionLogging
-Remove-ConnectionThrottling
-Update-ConnectionThrottling
-
+Update-CloudLoadBalancerSSLTermination - working on
 
 
 - Needs testing
@@ -57,8 +49,17 @@ Remove-CloudLoadBalancerNode
 Remove-CloudLoadBalancerHealthMonitor
 Remove-CloudLoadBalancerContentCaching
 Remove-CloudLoadBalancerSessionPersistence
+Remove-CloudLoadBalancerConnectionLogging
+Remove-CloudLoadBalancerConnectionThrottling
 Add-CloudLoadBalancerNode
 Add-Remove-CloudLoadBalancerContentCaching
+Add-CloudLoadBalancerConnectionLogging
+Add-CloudLoadBalancerConnectionThrottling
+Add-CloudLoadBalancerSessionPersistence
+Update-CloudLoadBalancerConnectionThrottling
+Update-CloudLoadBalancerSessionPersistence
+
+
 ############################################################################################>
 
 
@@ -1155,7 +1156,7 @@ function Remove-CloudLoadBalancerACL {
 #>
 }
 
-function Add-SessionPersistence {
+function Add-CloudLoadBalancerSessionPersistence {
 
     Param(
         [Parameter (Position=0, Mandatory=$True)][string] $Account = $(throw "-Account required"),
@@ -1175,12 +1176,19 @@ function Add-SessionPersistence {
     # Setting variables needed to execute this function
     $URI = (Get-CloudURI("loadbalancers")) + "/loadbalancers/$CloudLBID/sessionpersistence"
     
-    [xml]$AddSessionPersistenceXMLBody = '<sessionPersistence xmlns="http://docs.openstack.org/loadbalancers/api/v1.0" persistenceType="'+$PersistenceType.ToUpper()+'"/>'
-        
+
+    $object = New-Object -TypeName PSCustomObject -Property @{
+        "sessionPersistence"=New-Object -TypeName PSCustomObject -Property @{
+            "persistenceType"=$PersistenceType.ToUpper()
+            }
+        }
+
+    $Global:JSONbody = $object | ConvertTo-Json -Depth 3
+               
     # Making the call to the API
-    $AddPersistence = Invoke-RestMethod -Uri $URI  -Headers $HeaderDictionary -ContentType application/xml -Body $AddSessionPersistenceXMLBody -Method Put -ErrorAction Stop
+    $AddPersistence = Invoke-RestMethod -Uri $URI  -Headers $HeaderDictionary -ContentType application/json -Body $JSONBody -Method Put -ErrorAction Stop
       
-     if (!$AddPersistencetFinal) {
+     if (!$AddPersistence) {
             Write-host "Persistence not added"
             Break
         }
@@ -1225,7 +1233,7 @@ function Add-SessionPersistence {
 #>
 }
 
-function Update-SessionPersistence {
+function Update-CloudLoadBalancerSessionPersistence {
 
     Param(
         [Parameter (Position=0, Mandatory=$True)][string] $Account = $(throw "-Account required"),
@@ -1245,14 +1253,20 @@ function Update-SessionPersistence {
         # Setting variables needed to execute this function
         $URI = (Get-CloudURI("loadbalancers")) + "/loadbalancers/$CloudLBID/sessionpersistence"
 
-        [xml]$AddSessionPersistenceXMLBody = '<sessionPersistence xmlns="http://docs.openstack.org/loadbalancers/api/v1.0" persistenceType="'+$PersistenceType.ToUpper()+'"/>'
+        $object = New-Object -TypeName PSCustomObject -Property @{
+        "sessionPersistence"=New-Object -TypeName PSCustomObject -Property @{
+            "persistenceType"=$PersistenceType.ToUpper()
+            }
+        }
+
+        $Global:JSONbody = $object | ConvertTo-Json -Depth 3
 
 
         # Making the call to the API
-        [xml]$AddPersistence = Invoke-RestMethod -Uri $URI  -Headers $HeaderDictionary -ContentType application/xml -Body $AddSessionPersistenceXMLBody -Method Put -ErrorAction Stop
+        $AddPersistence = Invoke-RestMethod -Uri $URI  -Headers $HeaderDictionary -ContentType application/json -Body $JSONBody -Method Put -ErrorAction Stop
     
 
-        if (!$AddPersistencetFinal) {
+        if (!$AddPersistencet) {
             Write-host "Persistence not added"
             Break
         }
@@ -1354,7 +1368,7 @@ function Remove-CloudLoadBalancerSessionPersistence {
 #>
 }
 
-function Add-ConnectionLogging {
+function Add-CloudLoadBalancerConnectionLogging {
 
     Param(
         [Parameter (Position=0, Mandatory=$True)][string] $Account = $(throw "-Account required"),
@@ -1362,48 +1376,35 @@ function Add-ConnectionLogging {
         [Parameter (Position=2, Mandatory=$False)][string]$RegionOverride
     )
 
+    if ($RegionOverride){
+        $Global:RegionOverride = $RegionOverride
+        }
 
-
-
-
-
+        
+    # Retrieving authentication token
+    Get-AuthToken($account)
+ 
     # Setting variables needed to execute this function
-    Set-Variable -Name lonLBURI -Value "https://lon.loadbalancers.api.rackspacecloud.com/v1.0/$CloudDDI/loadbalancers/$CloudLBID/connectionlogging.xml"
-    Set-Variable -Name ORDLBURI -Value "https://ord.loadbalancers.api.rackspacecloud.com/v1.0/$CloudDDI/loadbalancers/$CloudLBID/connectionlogging.xml"
+    $URI = (Get-CloudURI("loadbalancers")) + "/loadbalancers/$CloudLBID/connectionlogging"
 
-    [xml]$AddConnectionLoggingXMLBody = '<connectionLogging xmlns="http://docs.openstack.org/loadbalancers/api/v1.0" enabled="true"/>'
-
-    if ($Region -eq "lon") {
-
-        Get-AuthToken
+    $global:object = New-Object -TypeName PSCustomObject -Property @{
+        "connectionLogging"=New-Object -TypeName PSCustomObject -Property @{
+            "enabled"="true"
+            }
+        }
         
-        Invoke-RestMethod -Uri $lonLBURI -Headers $HeaderDictionary -Body $AddConnectionLoggingXMLBody -ContentType application/xml -Method Put -ErrorAction Stop
+ 
+    $Global:JSONbody = $object | ConvertTo-Json
+    
+    Invoke-RestMethod -Uri $URI -Headers $HeaderDictionary -Body $JSONBody -ContentType application/json -Method Put -ErrorAction Stop
 
-        Write-Host "Connection logging has now been enabled. Please wait 10 seconds to see an updated detail listing:"
+    Write-Host "Connection logging has now been enabled."
 
-        Sleep 10
-
-        Get-CloudLoadBalancerDetails $CloudLBID lon
-    }
-    elseif ($Region -eq "ORD") {
-
-        Get-AuthToken
-        
-        Invoke-RestMethod -Uri $ORDLBURI -Headers $HeaderDictionary -Body $AddConnectionLoggingXMLBody -ContentType application/xml -Method Put -ErrorAction Stop
-
-        Write-Host "Connection logging has now been enabled. Please wait 10 seconds to see an updated detail listing:"
-
-        Sleep 10
-
-        Get-CloudLoadBalancerDetails $CloudLBID ORD
-    }
-    else {
-        Write-Host "Meh, something is broken"
-    }
+    
 
 <#
  .SYNOPSIS
- The Add-ConnectionLogging cmdlet will enable connection logging on a cloud load balancer in the specified region.
+ The Add-CloudLoadBalancerConnectionLogging cmdlet will enable connection logging on a cloud load balancer in the specified region.
 
  .DESCRIPTION
  See synopsis.
@@ -1411,12 +1412,21 @@ function Add-ConnectionLogging {
  .PARAMETER CloudLBID
  Use this parameter to define the ID of the load balancer you are about to modify. If you need to find this information, you can run the "Get-CloudLoadBalancers" cmdlet for a complete listing of load balancers.
 
- .PARAMETER Region
- Use this parameter to indicate the region in which you would like to execute this request.  Valid choices are "lon" or "ORD" (without the quotes).
+ .PARAMETER Account
+ Use this parameter to indicate which account you would like to execute this request against. 
+ Valid choices are defined in PoshNova configuration file.
+
+ .PARAMETER RegionOverride
+ This parameter will temporarily override the default region set in PoshNova configuration file.
 
  .EXAMPLE
- PS C:\Users\Administrator> Add-ConnectionLogging -CloudLBID 116351 -Region ord
- This example shows how to enable connection logging on a CLB in the ORD region.
+ PS C:\Users\Administrator> Add-CloudLoadBalancerConnectionLogging -CloudLBID 116351 -account prod
+ This example shows how to enable connection logging on a CLB in the account prod.
+
+ .EXAMPLE
+ PS C:\Users\Administrator> Add-CloudLoadBalancerConnectionLogging cloudus -CloudLBID 116351 -RegionOverride DFW
+ This example shows how to add connection logging for the cloudus account in DFW region
+
 
  .LINK
  http://docs.rackspace.com/loadbalancers/api/v1.0/clb-devguide/content/Log_Connections-d1e3924.html
@@ -1424,53 +1434,41 @@ function Add-ConnectionLogging {
 #>
 }
 
-function Remove-ConnectionLogging {
+function Remove-CloudLoadBalancerConnectionLogging {
 
     Param(
-        [Parameter(Position=0,Mandatory=$true)]
-        [string]$CloudLBID,
-        [Parameter(Position=1,Mandatory=$true)]
-        [string]$Region
+        [Parameter (Position=0, Mandatory=$True)][string] $Account = $(throw "-Account required"),
+        [Parameter(Position=1,Mandatory=$true)][string]$CloudLBID,
+        [Parameter (Position=2, Mandatory=$False)][string]$RegionOverride
     )
 
+    if ($RegionOverride){
+        $Global:RegionOverride = $RegionOverride
+        }
 
-    # Setting variables needed to execute this function
-    Set-Variable -Name lonLBURI -Value "https://lon.loadbalancers.api.rackspacecloud.com/v1.0/$CloudDDI/loadbalancers/$CloudLBID/connectionlogging.xml"
-    Set-Variable -Name ORDLBURI -Value "https://ord.loadbalancers.api.rackspacecloud.com/v1.0/$CloudDDI/loadbalancers/$CloudLBID/connectionlogging.xml"
-
-    [xml]$AddConnectionLoggingXMLBody = '<connectionLogging xmlns="http://docs.openstack.org/loadbalancers/api/v1.0" enabled="false"/>'
-
-    if ($Region -eq "lon") {
-
-        Get-AuthToken
         
-        Invoke-RestMethod -Uri $lonLBURI -Headers $HeaderDictionary -Body $AddConnectionLoggingXMLBody -ContentType application/xml -Method Put -ErrorAction Stop
+    # Retrieving authentication token
+    Get-AuthToken($account)
+ 
+    # Setting variables needed to execute this function
+    $URI = (Get-CloudURI("loadbalancers")) + "/loadbalancers/$CloudLBID/connectionlogging"
 
-        Write-Host "Connection logging has now been disabled. Please wait 10 seconds to see an updated detail listing:"
+    $global:object = New-Object -TypeName PSCustomObject -Property @{
+        "connectionLogging"=New-Object -TypeName PSCustomObject -Property @{
+            "enabled"="false"
+            }
+        }        
+ 
+    $Global:JSONbody = $object | ConvertTo-Json
 
-        Sleep 10
+    Invoke-RestMethod -Uri $URI -Headers $HeaderDictionary -Body $JSONBody -ContentType application/json -Method Put -ErrorAction Stop
 
-        Get-CloudLoadBalancerDetails $CloudLBID lon
-    }
-    elseif ($Region -eq "ORD") {
+    Write-Host "Connection logging has now been disabled."
 
-        Get-AuthToken
-
-        Invoke-RestMethod -Uri $ORDLBURI -Headers $HeaderDictionary -Body $AddConnectionLoggingXMLBody -ContentType application/xml -Method Put -ErrorAction Stop
-
-        Write-Host "Connection logging has now been disabled. Please wait 10 seconds to see an updated detail listing:"
-
-        Sleep 10
-
-        Get-CloudLoadBalancerDetails $CloudLBID ORD
-    }
-    else {
-        Write-Host "Meh, something is broken"
-    }
 
 <#
  .SYNOPSIS
- The Remove-ConnectionLogging cmdlet will disable connection logging on a cloud load balancer in the specified region.
+ The Remove-CloudLoadBalancerConnectionLogging cmdlet will disable connection logging on a cloud load balancer in the specified region.
 
  .DESCRIPTION
  See synopsis.
@@ -1478,12 +1476,20 @@ function Remove-ConnectionLogging {
  .PARAMETER CloudLBID
  Use this parameter to define the ID of the load balancer you are about to modify. If you need to find this information, you can run the "Get-CloudLoadBalancers" cmdlet for a complete listing of load balancers.
 
- .PARAMETER Region
- Use this parameter to indicate the region in which you would like to execute this request.  Valid choices are "lon" or "ORD" (without the quotes).
+ .PARAMETER Account
+ Use this parameter to indicate which account you would like to execute this request against. 
+ Valid choices are defined in PoshNova configuration file.
+
+ .PARAMETER RegionOverride
+ This parameter will temporarily override the default region set in PoshNova configuration file.
 
  .EXAMPLE
- PS C:\Users\Administrator> Remove-ConnectionLogging -CloudLBID 116351 -Region ord
- This example shows how to disable connection logging on a CLB in the ORD region.
+ PS C:\Users\Administrator> Remove-CloudLoadBalancerConnectionLogging -CloudLBID 116351 -account prod
+ This example shows how to disable connection logging on a CLB in the account prod.
+
+ .EXAMPLE
+ PS C:\Users\Administrator> Add-CloudLoadBalancerConnectionLogging cloudus -CloudLBID 116351 -RegionOverride DFW
+ This example shows how to remove connection logging for the cloudus account in DFW region
 
  .LINK
  http://docs.rackspace.com/loadbalancers/api/v1.0/clb-devguide/content/Log_Connections-d1e3924.html
@@ -1491,64 +1497,48 @@ function Remove-ConnectionLogging {
 #>
 }
 
-function Add-ConnectionThrottling {
+function Add-CloudLoadBalancerConnectionThrottling {
 
     Param(
-        [Parameter(Position=0,Mandatory=$true)]
-        [string]$CloudLBID,
-        [Parameter(Position=1,Mandatory=$false)]
-        [int]$MaxConnectionRate,
-        [Parameter(Position=2,Mandatory=$false)]
-        [int]$MaxConnections,
-        [Parameter(Position=3,Mandatory=$false)]
-        [int]$MinConnections,
-        [Parameter(Position=4,Mandatory=$false)]
-        [int]$RateInterval,
-        [Parameter(Position=5,Mandatory=$true)]
-        [string]$Region
+        [Parameter (Position=0, Mandatory=$True)][string] $Account = $(throw "-Account required"),
+        [Parameter(Position=1,Mandatory=$true)][string]$CloudLBID,
+        [Parameter(Position=2,Mandatory=$true)][int]$MaxConnectionRate,
+        [Parameter(Position=3,Mandatory=$true)][int]$MaxConnections,
+        [Parameter(Position=4,Mandatory=$true)][int]$MinConnections,
+        [Parameter(Position=5,Mandatory=$true)][int]$RateInterval,
+        [Parameter (Position=6, Mandatory=$False)][string]$RegionOverride
     )
 
-    # Setting variables needed to execute this function
-    Set-Variable -Name lonLBURI -Value "https://lon.loadbalancers.api.rackspacecloud.com/v1.0/$CloudDDI/loadbalancers/$CloudLBID/connectionthrottle.xml"
-    Set-Variable -Name ORDLBURI -Value "https://ord.loadbalancers.api.rackspacecloud.com/v1.0/$CloudDDI/loadbalancers/$CloudLBID/connectionthrottle.xml"
+    if ($RegionOverride){
+        $Global:RegionOverride = $RegionOverride
+        }
 
-    [xml]$AddConnectionThrottleXMLBody = '<connectionThrottle xmlns="http://docs.openstack.org/loadbalancers/api/v1.0"
-    minConnections="'+$MinConnections+'"
-    maxConnections="'+$MaxConnections+'"
-    maxConnectionRate="'+$MaxConnectionRate+'"
-    rateInterval="'+$RateInterval+'" />'
-
-    if ($Region -eq "lon") {
-
-        Get-AuthToken
         
-        Invoke-RestMethod -Uri $lonLBURI -Headers $HeaderDictionary -Body $AddConnectionThrottleXMLBody -ContentType application/xml -Method Put -ErrorAction Stop
+    # Retrieving authentication token
+    Get-AuthToken($account)
+ 
+    # Setting variables needed to execute this function
+    $URI = (Get-CloudURI("loadbalancers")) + "/loadbalancers/$CloudLBID/connectionthrottle"
 
-        Write-Host "Connection throttling has now been enabled. Please wait 10 seconds to see an updated detail listing:"
+    $global:object = New-Object -TypeName PSCustomObject -Property @{
+        "connectionThrottle"=New-Object -TypeName PSCustomObject -Property @{
+            "minConnections"=$MinConnections;
+            "maxConnections"=$MaxConnections;
+            "maxConnectionRate"=$MaxConnectionRate;
+            "rateInterval"=$RateInterval
+            }
+        }        
+ 
+    $Global:JSONbody = $object | ConvertTo-Json
+        
+    Invoke-RestMethod -Uri $URI -Headers $HeaderDictionary -Body $JSONBody -ContentType application/json -Method Put -ErrorAction Stop
 
-        Sleep 10
+    Write-Host "Connection throttling has now been enabled."
 
-        Get-CloudLoadBalancerDetails $CloudLBID $Region
-    }
-    elseif ($Region -eq "ORD") {
-
-        Get-AuthToken
-
-        Invoke-RestMethod -Uri $ORDLBURI -Headers $HeaderDictionary -Body $AddConnectionThrottleXMLBody -ContentType application/xml -Method Put -ErrorAction Stop
-
-        Write-Host "Connection throttling has now been enabled. Please wait 10 seconds to see an updated detail listing:"
-
-        Sleep 10
-
-        Get-CloudLoadBalancerDetails $CloudLBID $Region
-    }
-    else {
-        Write-Host "Meh, something is broken"
-    }
-
+        
 <#
  .SYNOPSIS
- The Add-ConnectionThrottling cmdlet will enable connection throttling on a cloud load balancer in the specified region.
+ The Add-CloudLoadBalancerConnectionThrottling cmdlet will enable connection throttling on a cloud load balancer in the specified region.
 
  .DESCRIPTION
  See synopsis.
@@ -1568,12 +1558,16 @@ function Add-ConnectionThrottling {
  .PARAMETER RateInterval
  Use this parameter to define the frequency (in seconds) at which the "maxConnectionRate" parameter is assessed. For example, a "maxConnectionRate" value of 30 with a "rateInterval" of 60 would allow a maximum of 30 connections per minute for a single IP address. This value must be between 1 and 3600.
 
- .PARAMETER Region
- Use this parameter to indicate the region in which you would like to execute this request.  Valid choices are "lon" or "ORD" (without the quotes).
+  .PARAMETER Account
+ Use this parameter to indicate which account you would like to execute this request against. 
+ Valid choices are defined in PoshNova configuration file.
+
+ .PARAMETER RegionOverride
+ This parameter will temporarily override the default region set in PoshNova configuration file.
 
  .EXAMPLE
- PS C:\Users\Administrator> Add-ConnectionThrottling -CloudLBID 116351 -Region ord
- This example shows how to enable connection logging on a CLB in the ORD region.
+ PS C:\Users\Administrator> Add-CloudLoadBalancerConnectionThrottling -CloudLBID 116351 -account prod
+ This example shows how to enable connection logging on a CLB in the account prod.
 
  .LINK
  http://docs.rackspace.com/loadbalancers/api/v1.0/clb-devguide/content/Throttle_Connections-d1e4057.html
@@ -1581,98 +1575,49 @@ function Add-ConnectionThrottling {
 #>
 }
 
-function Update-ConnectionThrottling {
+function Update-CloudLoadBalancerConnectionThrottling {
 
     Param(
-        [Parameter(Position=0,Mandatory=$true)]
-        [string]$CloudLBID,
-        [Parameter(Position=1,Mandatory=$false)]
-        [switch]$ChangeMaxConnectionRate,
-        [Parameter(Position=2,Mandatory=$false)]
-        [switch]$ChangeMaxConnections,
-        [Parameter(Position=3,Mandatory=$false)]
-        [switch]$ChangeMinConnections,
-        [Parameter(Position=4,Mandatory=$false)]
-        [switch]$ChangeRateInterval,
-        [Parameter(Position=5,Mandatory=$false)]
-        [int]$MaxConnectionRate,
-        [Parameter(Position=6,Mandatory=$false)]
-        [int]$MaxConnections,
-        [Parameter(Position=7,Mandatory=$false)]
-        [int]$MinConnections,
-        [Parameter(Position=8,Mandatory=$false)]
-        [int]$RateInterval,
-        [Parameter(Position=9,Mandatory=$true)]
-        [string]$Region
+        [Parameter (Position=0, Mandatory=$True)][string] $Account = $(throw "-Account required"),
+        [Parameter(Position=1,Mandatory=$true)][string]$CloudLBID,
+        [Parameter(Position=2,Mandatory=$true)][int]$MaxConnectionRate,
+        [Parameter(Position=3,Mandatory=$true)][int]$MaxConnections,
+        [Parameter(Position=4,Mandatory=$false)][int]$MinConnections,
+        [Parameter(Position=5,Mandatory=$true)][int]$RateInterval,
+        [Parameter (Position=6, Mandatory=$False)][string]$RegionOverride
     )
 
+
+    if ($RegionOverride){
+        $Global:RegionOverride = $RegionOverride
+        }
+
+        
+    # Retrieving authentication token
+    Get-AuthToken($account)
+ 
     # Setting variables needed to execute this function
-    Set-Variable -Name lonLBURI -Value "https://lon.loadbalancers.api.rackspacecloud.com/v1.0/$CloudDDI/loadbalancers/$CloudLBID/connectionthrottle.xml"
-    Set-Variable -Name ORDLBURI -Value "https://ord.loadbalancers.api.rackspacecloud.com/v1.0/$CloudDDI/loadbalancers/$CloudLBID/connectionthrottle.xml"
+    $URI = (Get-CloudURI("loadbalancers")) + "/loadbalancers/$CloudLBID/connectionthrottle"
 
-    if ($ChangeMaxConnectionRate) {
-        [xml]$ChangeConnectionThrottleXMLBody = '<connectionThrottle xmlns="http://docs.openstack.org/loadbalancers/api/v1.0" maxConnectionRate="'+$MaxConnectionRate+'"/>'
-    }
-    elseif ($ChangeMaxConnections) {
-        [xml]$ChangeConnectionThrottleXMLBody = '<connectionThrottle xmlns="http://docs.openstack.org/loadbalancers/api/v1.0" maxConnections="'+$MaxConnections+'"/>'
-    }
-    elseif ($ChangeMinConnections) {
-        [xml]$ChangeConnectionThrottleXMLBody = '<connectionThrottle xmlns="http://docs.openstack.org/loadbalancers/api/v1.0" minConnections="'+$MinConnections+'"/>'
-    }
-    elseif ($ChangeRateInterval) {
-        [xml]$ChangeConnectionThrottleXMLBody = '<connectionThrottle xmlns="http://docs.openstack.org/loadbalancers/api/v1.0" rateInterval="'+$RateInterval+'"/>'
-    }
+    $global:object = New-Object -TypeName PSCustomObject -Property @{
+        "connectionThrottle"=New-Object -TypeName PSCustomObject -Property @{
+            "minConnections"=$MinConnections;
+            "maxConnections"=$MaxConnections;
+            "maxConnectionRate"=$MaxConnectionRate;
+            "rateInterval"=$RateInterval
+            }
+        }        
+ 
+    $Global:JSONbody = $object | ConvertTo-Json
 
-    # Using conditional logic to route requests to the relevant API per data center
-    if ($Region -eq "lon") {    
+    Invoke-RestMethod -Uri $URI -Headers $HeaderDictionary -ContentType application/json -Body $JSONBody -Method Put -ErrorAction Stop
+
+    Write-Host "Connection Throttling values have now been modified."
+
     
-        # Retrieving authentication token
-        Get-AuthToken
-
-        # Making the call to the API
-        [xml]$ThrottleStep0 = Invoke-RestMethod -Uri $lonLBURI  -Headers $HeaderDictionary -ContentType application/xml -Body $ChangeConnectionThrottleXMLBody -Method Put -ErrorAction Stop
-        [xml]$ThrottleFinal = ($ThrottleStep0.innerxml)
-
-        if (!$ThrottleFinal) {
-            Break
-        }
-
-        # Since the response body is XML, we can use dot notation to show the information needed without further parsing.
-     
-        Write-Host "Connection Throttling values have now been modified.  Please wait 10 seconds for an updated attribute listing."
-
-        Sleep 10
-
-        Get-CloudLoadBalancerDetails -CloudLBID $CloudLBID -Region $Region
-    }
-    elseif ($Region -eq "ORD") {    
-    
-        # Retrieving authentication token
-        Get-AuthToken
-
-        # Making the call to the API
-        [xml]$ThrottleStep0 = Invoke-RestMethod -Uri $ORDLBURI  -Headers $HeaderDictionary -ContentType application/xml -Body $ChangeConnectionThrottleXMLBody -Method Put -ErrorAction Stop
-        [xml]$ThrottleFinal = ($ThrottleStep0.innerxml)
-
-        if (!$ThrottleFinal) {
-            Break
-        }
-
-        # Since the response body is XML, we can use dot notation to show the information needed without further parsing.
-     
-        Write-Host "Connection Throttling values have now been modified.  Please wait 10 seconds for an updated attribute listing."
-
-        Sleep 10
-
-        Get-CloudLoadBalancerDetails -CloudLBID $CloudLBID -Region $Region
-    }
-    else {
-        Write-Host "Meh, something is broken"
-    }
-
 <#
  .SYNOPSIS
- The Update-ConnectionThrottling cmdlet will modify connection throttling values on the specified load balancer.
+ The Update-CloudLoadBalancerConnectionThrottling cmdlet will modify connection throttling values on the specified load balancer.
 
  .DESCRIPTION
  See the synopsis field.
@@ -1704,12 +1649,17 @@ function Update-ConnectionThrottling {
  .PARAMETER RateInterval
  Use this parameter to define the frequency (in seconds) at which the "maxConnectionRate" parameter is assessed. For example, a "maxConnectionRate" value of 30 with a "rateInterval" of 60 would allow a maximum of 30 connections per minute for a single IP address. This value must be between 1 and 3600.
  
- .PARAMETER Region
- Use this parameter to indicate the region in which you would like to execute this request.  Valid choices are "lon" or "ORD" (without the quotes).
+  .PARAMETER Account
+ Use this parameter to indicate which account you would like to execute this request against. 
+ Valid choices are defined in PoshNova configuration file.
+
+ .PARAMETER RegionOverride
+ This parameter will temporarily override the default region set in PoshNova configuration file.
 
  .EXAMPLE
- PS C:\Users\Administrator> Update-ConnectionThrottling -CloudLBID 116351 -ChangeMaxConnections -MaxConnections 150 -Region ord
- This example shows how to update the MaxConnections value of a CLB in the ORD region
+ PS C:\Users\Administrator> Update-CloudLoadBalancerConnectionThrottling -CloudLBID 116351 -MaxConnectionRate 10 -MaxConnections 100 -MinConnections 5 -RateInterval 1 -account prod
+  
+ This example shows how to update the connection throttling values of a CLB in the account prod
 
  .LINK
  http://docs.rackspace.com/loadbalancers/api/v1.0/clb-devguide/content/Throttle_Connections-d1e4057.html
@@ -1717,49 +1667,30 @@ function Update-ConnectionThrottling {
 #>
 }
 
-function Remove-ConnectionThrottling {
+function Remove-CloudLoadBalancerConnectionThrottling {
 
     Param(
-        [Parameter(Position=0,Mandatory=$true)]
-        [string]$CloudLBID,
-        [Parameter(Position=1,Mandatory=$true)]
-        [string]$Region
+        [Parameter (Position=0, Mandatory=$True)][string] $Account = $(throw "-Account required"),
+        [Parameter(Position=1,Mandatory=$true)][string]$CloudLBID,
+        [Parameter (Position=2, Mandatory=$False)][string]$RegionOverride
     )
 
 
-    # Setting variables needed to execute this function
-    Set-Variable -Name lonLBURI -Value "https://lon.loadbalancers.api.rackspacecloud.com/v1.0/$CloudDDI/loadbalancers/$CloudLBID/connectionthrottle.xml"
-    Set-Variable -Name ORDLBURI -Value "https://ord.loadbalancers.api.rackspacecloud.com/v1.0/$CloudDDI/loadbalancers/$CloudLBID/connectionthrottle.xml"
+    if ($RegionOverride){
+        $Global:RegionOverride = $RegionOverride
+        }
 
-    if ($Region -eq "lon") {
-
-        # Retrieving authentication token
-        Get-AuthToken
         
-        Invoke-RestMethod -Uri $lonLBURI -Headers $HeaderDictionary -Body $AddConnectionLoggingXMLBody -Method Delete -ErrorAction Stop
+    # Retrieving authentication token
+    Get-AuthToken($account)
+ 
+    # Setting variables needed to execute this function
+    $URI = (Get-CloudURI("loadbalancers")) + "/loadbalancers/$CloudLBID/connectionthrottle"    
 
-        Write-Host "Connection throttling has now been disabled. Please wait 10 seconds to see an updated detail listing:"
+    Invoke-RestMethod -Uri $URI -Headers $HeaderDictionary -Body $JSOBody -Method Delete -ErrorAction Stop
 
-        Sleep 10
+    Write-Host "Connection throttling has now been disabled."
 
-        Get-CloudLoadBalancerDetails $CloudLBID lon
-    }
-    elseif ($Region -eq "ORD") {
-
-        # Retrieving authentication token
-        Get-AuthToken
-            
-        Invoke-RestMethod -Uri $ORDLBURI -Headers $HeaderDictionary -Body $AddConnectionLoggingXMLBody -Method Delete -ErrorAction Stop
-
-        Write-Host "Connection logging has now been disabled. Please wait 10 seconds to see an updated detail listing:"
-
-        Sleep 10
-
-        Get-CloudLoadBalancerDetails $CloudLBID ORD
-    }
-    else {
-        Write-Host "Meh, something is broken"
-    }
 
 <#
  .SYNOPSIS
@@ -1771,12 +1702,16 @@ function Remove-ConnectionThrottling {
  .PARAMETER CloudLBID
  Use this parameter to define the ID of the load balancer you are about to modify. If you need to find this information, you can run the "Get-CloudLoadBalancers" cmdlet for a complete listing of load balancers.
 
- .PARAMETER Region
- Use this parameter to indicate the region in which you would like to execute this request.  Valid choices are "lon" or "ORD" (without the quotes).
+  .PARAMETER Account
+ Use this parameter to indicate which account you would like to execute this request against. 
+ Valid choices are defined in PoshNova configuration file.
+
+ .PARAMETER RegionOverride
+ This parameter will temporarily override the default region set in PoshNova configuration file.
 
  .EXAMPLE
- PS C:\Users\Administrator> Remove-ConnectionThrottling -CloudLBID 116351 -Region ord
- This example shows how to disable connection throttling on a CLB in the ORD region.
+ PS C:\Users\Administrator> Remove-ConnectionThrottling -CloudLBID 116351 -account prod
+  This example shows how to disable connection throttling on a CLB in the account prod.
 
  .LINK
  http://docs.rackspace.com/loadbalancers/api/v1.0/clb-devguide/content/Throttle_Connections-d1e4057.html
@@ -2339,74 +2274,79 @@ function Add-CloudLoadBalancerSSLTermination {
 function Update-SSLTermination {
 
     Param(
-        [Parameter(Position=0,Mandatory=$true)]
-        [string]$CloudLBID,
-        [Parameter(Position=1,Mandatory=$false)]
-        [switch]$EnableSSLTermination,
-        [Parameter(Position=2,Mandatory=$false)]
-        [switch]$DisableSSLTermination,
-        [Parameter(Position=3,Mandatory=$false)]
-        [switch]$UpdateSSLPort,
-        [Parameter(Position=4,Mandatory=$false)]
-        [string]$SSLPort,
-        [Parameter(Position=5,Mandatory=$false)]
-        [switch]$EnableSecureTrafficOnly,
-        [Parameter(Position=6,Mandatory=$false)]
-        [switch]$DisableSecureTraficOnly,
-        [Parameter(Position=7,Mandatory=$true)]
-        [string]$Region
-    )
+        [Parameter (Position=0, Mandatory=$True)][string] $Account = $(throw "-Account required"),
+        [Parameter(Position=1,Mandatory=$true)][string]$CloudLBID,
+        [Parameter(Position=2,Mandatory=$false)][switch]$EnableSSLTermination,
+        [Parameter(Position=3,Mandatory=$false)][switch]$DisableSSLTermination,
+        [Parameter(Position=4,Mandatory=$false)][switch]$UpdateSSLPort,
+        [Parameter(Position=5,Mandatory=$false)][string]$SSLPort,
+        [Parameter(Position=6,Mandatory=$false)][switch]$EnableSecureTrafficOnly,
+        [Parameter(Position=7,Mandatory=$false)][switch]$DisableSecureTraficOnly,
+        [Parameter (Position=8, Mandatory=$False)][string]$RegionOverride
+        
+   )
+
+
+    if ($RegionOverride){
+        $Global:RegionOverride = $RegionOverride
+    }
+
+        
+    # Retrieving authentication token
+    Get-AuthToken($account)  
+
+    # Setting variables needed to execute this function
+    $URI = (Get-CloudURI("loadbalancers")) + "/loadbalancers/$CloudLBID/ssltermination"
+
 
     # Setting variables needed to execute this function
     Set-Variable -Name lonLBURI -Value "https://lon.loadbalancers.api.rackspacecloud.com/v1.0/$CloudDDI/loadbalancers/$CloudLBID/ssltermination.xml"
     Set-Variable -Name ORDLBURI -Value "https://ord.loadbalancers.api.rackspacecloud.com/v1.0/$CloudDDI/loadbalancers/$CloudLBID/ssltermination.xml"
 
+
     if ($EnableSSLTermination) {
-        [xml]$SSLTerminationXMLBody = '<sslTermination xmlns="http://docs.openstack.org/loadbalancers/api/v1.0" enabled="true"></sslTermination>'
-    }
-    elseif ($DisableSSLTermination) {
-        [xml]$SSLTerminationXMLBody = '<sslTermination xmlns="http://docs.openstack.org/loadbalancers/api/v1.0" enabled="false"></sslTermination>'
-    }
+    
+        $object = New-Object -TypeName PSCustomObject -Property @{
+            "sslTermination"=New-Object -TypeName PSCustomObject -Property @{
+                "enabled"="true";
+                }
+            }
+        }
+    elseif ($DisableSSLTermination) {    
+    
+        $object = New-Object -TypeName PSCustomObject -Property @{
+            "sslTermination"=New-Object -TypeName PSCustomObject -Property @{
+                "enabled"="false";
+                }
+            }
+        }
     elseif ($EnableSecureTrafficOnly) {
-        [xml]$SSLTerminationXMLBody = '<sslTermination xmlns="http://docs.openstack.org/loadbalancers/api/v1.0" secureTrafficOnly="true"></sslTermination>'
-    }
+        $object = New-Object -TypeName PSCustomObject -Property @{
+            "sslTermination"=New-Object -TypeName PSCustomObject -Property @{
+                "secureTrafficOnly"="true";
+                }
+            }
+        }
     elseif ($DisableSecureTrafficOnly) {
-        [xml]$SSLTerminationXMLBody = '<sslTermination xmlns="http://docs.openstack.org/loadbalancers/api/v1.0" secureTrafficOnly="false"></sslTermination>'
-    }
+        $object = New-Object -TypeName PSCustomObject -Property @{
+            "sslTermination"=New-Object -TypeName PSCustomObject -Property @{
+                "secureTrafficOnly"="false";
+                }
+        }
     elseif ($UpdateSSLPort) {
-        [xml]$SSLTerminationXMLBody = '<sslTermination xmlns="http://docs.openstack.org/loadbalancers/api/v1.0" securePort="'+$SSLPort+'"></sslTermination>'
-    }
-
-    if ($Region -eq "lon") {
+        $object = New-Object -TypeName PSCustomObject -Property @{
+            "sslTermination"=New-Object -TypeName PSCustomObject -Property @{
+                "securePort"=$SSLPort;
+                }
+        }
         
-        # Retrieving authentication token
-        Get-AuthToken
+    $JSONbody = $object | ConvertTo-Json -Depth 3
+
+    Invoke-RestMethod -Uri $URI -Headers $HeaderDictionary -Body $JSONBody -ContentType application/xml -Method Put -ErrorAction Stop | Out-Null
         
-        Invoke-RestMethod -Uri $lonLBURI -Headers $HeaderDictionary -Body $SSLTerminationXMLBody -ContentType application/xml -Method Put -ErrorAction Stop | Out-Null
-        
-        Write-Host "SSL termination configuration has been updated.  Please wait 10 seconds for confirmation:"
+    Write-Host "SSL termination configuration has been updated."
 
-        Sleep 10
-
-        Get-SSLTermination -CloudLBID $CloudLBID -Region $Region
-    }
-    elseif ($Region -eq "ORD") {
-
-        # Retrieving authentication token
-        Get-AuthToken
-        
-        Invoke-RestMethod -Uri $ORDLBURI -Headers $HeaderDictionary -Body $SSLTerminationXMLBody -ContentType application/xml -Method Put -ErrorAction Stop | Out-Null
-        
-        Write-Host "SSL termination configuration has been updated.  Please wait 10 seconds for confirmation:"
-
-        Sleep 10
-
-        Get-SSLTermination -CloudLBID $CloudLBID -Region $Region
-    }
-    else {
-        Write-Host "Meh, something is broken"
-    }
-
+    
 <#
  .SYNOPSIS
  The Update-SSLTermination cmdlet will add SSL termination to a cloud load balancer in the specified region.
@@ -2435,12 +2375,16 @@ function Update-SSLTermination {
  .PARAMETER DisableSecureTrafficOnly
  Use this switch to indicate if the load balancer may accept non-secure and secure traffic. If this switch is passed, the load balancer will begin accepting all types of traffic.
 
- .PARAMETER Region
- Use this parameter to indicate the region in which you would like to execute this request.  Valid choices are "lon" or "ORD" (without the quotes).
+ .PARAMETER Account
+ Use this parameter to indicate which account you would like to execute this request against. 
+ Valid choices are defined in PoshNova configuration file.
+
+ .PARAMETER RegionOverride
+ This parameter will temporarily override the default region set in PoshNova configuration file.
 
  .EXAMPLE
- PS C:\Users\Administrator> Update-SSLTermination -CloudLBID 116351 -DisableSSLTrafficOnly -Region ORD
- This example shows how to update the SSL termination settings of a cloud load balancer in the ORD region. This example would configure the load balancer to accept both non-secure and secure traffic.
+ PS C:\Users\Administrator> Update-SSLTermination -CloudLBID 116351 -DisableSSLTrafficOnly -account prod
+ This example shows how to update the SSL termination settings of a cloud load balancer in the account prod region. This example would configure the load balancer to accept both non-secure and secure traffic.
 
  .LINK
  http://docs.rackspace.com/loadbalancers/api/v1.0/clb-devguide/content/SSLTermination-d1e2479.html
