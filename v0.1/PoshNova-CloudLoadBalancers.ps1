@@ -11,8 +11,7 @@ Authors
 -----------
     Nielsen Pierce (nielsen.pierce@rackspace.co.uk)
     Alexei Andreyev (alexei.andreyev@rackspace.co.uk)
-    
-Description
+    Description
 -----------
 PowerShell v3 module for interaction with NextGen Rackspace Cloud API (PoshNova) 
 
@@ -21,18 +20,12 @@ CLB v1.0 API reference
 http://docs.rackspace.com/loadbalancers/api/v1.0/clb-devguide/content/Overview-d1e82.html
 
 Get-CloudLoadBalancerDetails
-Update-CloudLoadBalancerSSLTermination - working on
+Add-CloudLoadBalancer
 
 
 - Needs testing
 
-Get-CloudLoadBalancerSSLTermination
-Add-CloudLoadBalancerSSLTermination
-Add-CloudLoadBalancerACLItem
-Add-CloudLoadBalancerHealthMonitor
-Update-CloudLoadBalancerNode
-Update-CloudLoadBalancer
-Remove-CloudLoadBalancerSSLTermination
+Update-CloudLoadBalancerSSLTermination
 
 - Complete
 
@@ -42,6 +35,9 @@ Get-CloudLoadBalancerNodeList
 Get-CloudLoadBalancerProtocols
 Get-CloudLoadBalancers
 Get-CloudLoadBalancerHealthMonitor
+Get-CloudLoadBalancerSSLTermination
+Get-CloudLoadBalancerAlgorithms
+Get-CloudLoadBalancerProtocols
 Remove-CloudLoadBalancerACL
 Remove-CloudLoadBalancerACLItem
 Remove-CloudLoadBalancer
@@ -51,17 +47,22 @@ Remove-CloudLoadBalancerContentCaching
 Remove-CloudLoadBalancerSessionPersistence
 Remove-CloudLoadBalancerConnectionLogging
 Remove-CloudLoadBalancerConnectionThrottling
+Remove-CloudLoadBalancerSSLTermination
 Add-CloudLoadBalancerNode
 Add-Remove-CloudLoadBalancerContentCaching
 Add-CloudLoadBalancerConnectionLogging
 Add-CloudLoadBalancerConnectionThrottling
 Add-CloudLoadBalancerSessionPersistence
+Add-CloudLoadBalancerSSLTermination
+Add-CloudLoadBalancerHealthMonitor
+Add-CloudLoadBalancerACLItem
 Update-CloudLoadBalancerConnectionThrottling
 Update-CloudLoadBalancerSessionPersistence
+Update-CloudLoadBalancerNode
+Update-CloudLoadBalancer
 
 
 ############################################################################################>
-
 
 function Get-CloudLoadBalancers{
 
@@ -199,27 +200,21 @@ function Get-CloudLoadBalancerProtocols{
    if ($RegionOverride){
         $Global:RegionOverride = $RegionOverride
     }
-
-    try {
         
-        # Retrieving authentication token
-        Get-AuthToken($account)
+   # Retrieving authentication token
+   Get-AuthToken($account)
        
 
-        # Setting variables needed to execute this function
-        $URI = (Get-CloudURI("loadbalancers")) + "/loadbalancers/protocols"
+   # Setting variables needed to execute this function
+   $URI = (Get-CloudURI("loadbalancers")) + "/loadbalancers/protocols"
         
-        # Making the call to the API for a list of available server images and storing data into a variable
-	    $LBProtocolList = (Invoke-RestMethod -Uri $URI  -Headers $HeaderDictionary)
+   # Making the call to the API for a list of available server images and storing data into a variable
+   $LBProtocolList = (Invoke-RestMethod -Uri $URI  -Headers $HeaderDictionary).protocols
 
-        # Since the response body is XML, we can use dot notation to show the information needed without further parsing.
-        return $LBProtocolList.Protocols | Sort-Object Name | ft -AutoSize;
+   # Since the response body is JSON, we can use dot notation to show the information needed without further parsing.
+   return $LBProtocolList | Sort-Object Name | ft -AutoSize;
     
-    }
-
-    catch {
-        Invoke-Exception($_.Exception)
-    }
+    
 <#
  .SYNOPSIS
  The Get-CloudLoadBalancerProtocols cmdlet will pull down a list of all available Rackspace Cloud Load Balancer protocols.
@@ -246,7 +241,7 @@ function Get-CloudLoadBalancerProtocols{
  http://docs.rackspace.com/loadbalancers/api/v1.0/clb-devguide/content/List_Load_Balancing_Protocols-d1e4269.html
 
 #>
-#}
+}
 
 function Get-CloudLoadBalancerAlgorithms{
 
@@ -258,30 +253,23 @@ function Get-CloudLoadBalancerAlgorithms{
    if ($RegionOverride){
         $Global:RegionOverride = $RegionOverride
     }
-
-    try {
-        
-        # Retrieving authentication token
-        Get-AuthToken($account)
+           
+    # Retrieving authentication token
+    Get-AuthToken($account)
        
 
-        # Setting variables needed to execute this function
-        $URI = (Get-CloudURI("loadbalancers")) + "/loadbalancers/algorithms.xml"
+    # Setting variables needed to execute this function
+    $URI = (Get-CloudURI("loadbalancers")) + "/loadbalancers/algorithms"
         
 
     # Making the call to the API for a list of available load balancers and storing data into a variable
-    [xml]$LBAlgorithmList = (Invoke-RestMethod -Uri $URI  -Headers $HeaderDictionary).innerxml
+    $Global:LBAlgorithmList = (Invoke-RestMethod -Uri $URI  -Headers $HeaderDictionary).algorithms
    
 
     # Since the response body is XML, we can use dot notation to show the information needed without further parsing.
-    return $LBAlgorithmList.algorithms.algorithm | Sort-Object Name | ft -AutoSize;
+    return $LBAlgorithmList | Sort-Object Name | ft -AutoSize;
 
-    }
-
-    catch {
-        Invoke-Exception($_.Exception)
-    }
-
+   
 <#
  .SYNOPSIS
  The Get-CloudLoadBalancerAlgorithms cmdlet will pull down a list of all available Rackspace Cloud Load Balancer algorithms.
@@ -414,7 +402,6 @@ function Add-CloudLoadBalancer {
  http://docs.rackspace.com/loadbalancers/api/v1.0/clb-devguide/content/Create_Load_Balancer-d1e1635.html
 
 #>
-}
 
 function Get-CloudLoadBalancerNodeList{
 
@@ -675,43 +662,61 @@ function Update-CloudLoadBalancer {
     
     Param(
         [Parameter (Position=0, Mandatory=$True)][string] $Account = $(throw "-Account required"),
-        [Parameter(Position=6,Mandatory=$true)][int]$CloudLBID,
-        [Parameter(Position=7,Mandatory=$false)][string]$CloudLBName,
-        [Parameter(Position=8,Mandatory=$false)][int]$CloudLBPort,
-        [Parameter(Position=9,Mandatory=$false)][string]$CloudLBProtocol,
-        [Parameter(Position=10,Mandatory=$false)][string]$CloudLBAlgorithm,
-        [Parameter(Position=11,Mandatory=$false)][int]$CloudLBTimeout,
-        [Parameter(Position=12,Mandatory=$false)][string]$RegionOverride
+        [Parameter(Position=2,Mandatory=$true)][int]$CloudLBID,
+        [Parameter(Position=3,Mandatory=$false)][string]$CloudLBName,
+        [Parameter(Position=4,Mandatory=$false)][int]$CloudLBPort,
+        [Parameter(Position=5,Mandatory=$false)][string][ValidateSet("DNS_TCP", "DNS_UDP", "FTP", "HTTP", "HTTPS", "IMAPS", "IMAPv2", "IMAPv3", "IMAPv4", "LDAP", "LDAPS", "MYSQL", "POP3", "POP3S", "SFTP", "SMTP", "TCP", "TCP_CLIENT_FIRST", "UDP", "UDP_STREAM")]$CloudLBProtocol,
+        [Parameter(Position=6,Mandatory=$false)][string][ValidateSet("LEAST_CONNECTIONS", "RANDOM", "ROUND_ROBIN", "WEIGHTED_LEAST_CONNECTIONS","WEIGHTED_ROUND_ROBIN")]$CloudLBAlgorithm,
+        [Parameter(Position=7,Mandatory=$false)][int]$CloudLBTimeout,
+        [Parameter(Position=8,Mandatory=$false)][string]$RegionOverride
     )
         
     
     if ($RegionOverride){
         $Global:RegionOverride = $RegionOverride
         }
+        
     # Retrieving authentication token
     Get-AuthToken($account)
 
     # Setting variables needed to execute this function
     $URI = (Get-CloudURI("loadbalancers")) + "/loadbalancers/$CloudLBID"
 
-    $global:object = New-Object -TypeName PSCustomObject -Property @{
-        "loadbalancer"=New-Object -TypeName PSCustomObject -Property @{
-            "name"=$CloudLBName;
-            "port"=$CloudLBPort;
-            "protocol"=$CloudLBProtocol;
-            "algorithm"=$CloudLBAlgorithm;
-            "timeout"=$CloudLBTimeout
+    $LBObject = New-Object -TypeName PSCustomObject -Property @{}
+    $LBObject | Add-Member -MemberType NoteProperty -Name "name" -Value $CloudLBName
 
-            }
+        
+     
+    if ($CloudLBPort) {        $LBObject | Add-Member -MemberType NoteProperty -Name "port" -Value $CloudLBPort
         }
- 
-    $JSONbody = $object | ConvertTo-Json -Depth 3
+        
+            
+     if ($CloudLBProtocol) {
+        $LBObject | Add-Member -MemberType NoteProperty -Name "protocol" -Value $CloudLBProtocol.ToUpper()
+        }
+        
+
+    if ($CloudLBAlgorithm) {
+        $LBObject | Add-Member -MemberType NoteProperty -Name "algorithm" -Value $CloudLBAlgorithm.ToUpper()
+        }
+         
+
+    if ($CloudLBTimeout) {
+        $LBObject | Add-Member -MemberType NoteProperty -Name "timeout" -Value $CloudLBTimeout
+        }  
+        
+    $object = New-Object -TypeName PSCustomObject -Property @{
+        "loadBalancer"= $LBObject
+        }
+
+   
+    $global:JSONbody = $object | ConvertTo-Json -Depth 3
         
     $UpdateCloudLB = Invoke-RestMethod -Uri $URI -Headers $HeaderDictionary -Body $JSONBody -ContentType application/json -Method Put -ErrorAction Stop
 
     Write-Host "Your load balancer has been updated"
 
-    Get-CloudLoadBalancerDetails -Account $account -CloudLBID $CloudLBID
+    #Get-CloudLoadBalancerDetails -Account $account -CloudLBID $CloudLBID
 
 <#
  .SYNOPSIS
@@ -730,10 +735,16 @@ function Update-CloudLoadBalancer {
  Use this parameter to define the TCP/UDP port number of the specified load balancer.
 
 .PARAMETER CloudLBProtocol
- Use this parameter to define the protocol of the specified load balancer.  If you are unsure, you can get a list of supported protocols and ports by running the "Get-LoadBalancerProtocols" cmdlet.
+ Use this parameter to define the protocol of the specified load balancer.  If you are unsure, you can get a list of supported protocols and ports by running the "Get-CloudLoadBalancerProtocols" cmdlet.
 
  .PARAMETER CloudLBAlgorithm
- Use this parameter to define the load balancing algorithm you'd like to use with your load balancer.  If you are unsure, you can get a list of supported algorithms by running the "Get-LoadBalancerAlgorithms" cmdlet.
+ Use this parameter to define the load balancing algorithm you'd like to use with your load balancer.  If you are unsure, you can get a list of supported algorithms by running the "Get-CloudLoadBalancerAlgorithms" cmdlet.
+
+ LEAST_CONNECTIONS
+ RANDOM
+ ROUND_ROBIN
+ WEIGHTED_LEAST_CONNECTIONS
+ WEIGHTED_ROUND_ROBIN
 
  .PARAMETER CloudLBTimeout
  Use this parameter to define the timeout value of the specified load balancer.
@@ -759,10 +770,10 @@ function Update-CloudLoadBalancerNode {
     
     Param(
         [Parameter (Position=0, Mandatory=$True)][string] $Account = $(throw "-Account required"),
-        [Parameter(Position=1,Mandatory=$false)][string]$CloudLBID,
-        [Parameter(Position=2,Mandatory=$false)][string]$CloudLBNodeID,
+        [Parameter(Position=1,Mandatory=$false)][int]$CloudLBID,
+        [Parameter(Position=2,Mandatory=$false)][int]$CloudLBNodeID,
         [Parameter (Position=3,Mandatory=$false)][string][ValidateSet("ENABLED", "DISABLED", "DRAINING")]$CloudLBNodeCondition,
-        [Parameter(Position=4,Mandatory=$false)][string]$CloudLBNodeType,
+        [Parameter(Position=4,Mandatory=$false)][string][ValidateSet("PRIMARY", "SECONDARY")]$CloudLBNodeType,
         [Parameter(Position=5,Mandatory=$false)][int]$CloudLBNodeWeight,
         [Parameter(Position=6,Mandatory=$false)][string]$RegionOverride
     )
@@ -771,29 +782,56 @@ function Update-CloudLoadBalancerNode {
      if ($RegionOverride){
         $Global:RegionOverride = $RegionOverride
         }
+
     # Retrieving authentication token
     Get-AuthToken($account)
 
     # Setting variables needed to execute this function
     $URI = (Get-CloudURI("loadbalancers")) + "/loadbalancers/$CloudLBID/nodes/$CloudLBNodeID"
 
-    $object = New-Object -TypeName PSCustomObject -Property @{
-        "node"=New-Object -TypeName PSCustomObject -Property @{
-            "condition"=$CloudLBNodeCondition;
-            "type"=$CloudLBNodeType;
-            "weight"=$CloudLBNodeWeight
+    if ($CloudLBNodeWeight){
+        $object = New-Object -TypeName PSCustomObject -Property @{
+            "node"=New-Object -TypeName PSCustomObject -Property @{
+                "condition"=$CloudLBNodeCondition.toupper();
+                "weight"=$CloudLBNodeWeight
+                }
             }
-        }
- 
-    $JSONbody = $object | ConvertTo-Json -Depth 3
+    }
+
+    elseif ($CloudLBNodeType) {
+         $object = New-Object -TypeName PSCustomObject -Property @{
+            "node"=New-Object -TypeName PSCustomObject -Property @{
+                "condition"=$CloudLBNodeCondition.toupper();
+                "type"=$CloudLBNodeType.toupper()
+                }
+            }
+    }
+
+    elseif (($CloudLBNodeType) -and ($CloudLBNodeWeight)){
+         $object = New-Object -TypeName PSCustomObject -Property @{
+            "node"=New-Object -TypeName PSCustomObject -Property @{
+                "condition"=$CloudLBNodeCondition.toupper();
+                "weight"=$CloudLBNodeWeight;
+                "type"=$CloudLBNodeType.toupper()
+                }
+            }
+    }
+
+    else {
+         $object = New-Object -TypeName PSCustomObject -Property @{
+            "node"=New-Object -TypeName PSCustomObject -Property @{
+                "condition"=$CloudLBNodeCondition.toupper()
+                 }
+            }
+    }
+
+    $global:JSONbody = $object | ConvertTo-Json
     
     Invoke-RestMethod -Uri $URI -Headers $HeaderDictionary -Body $JSONBody -ContentType application/json -Method Put -ErrorAction Stop
 
     Write-Host "Your node has been updated."
 
-    Get-CloudLoadBalancerNodeList -Account $account -CloudLBID $CloudLBID
- 
-
+    
 <#
  .SYNOPSIS
  The Update-CloudLoadBalancerNode cmdlet will update a cloud load balancer in the specified region.
@@ -982,12 +1020,12 @@ function Add-CloudLoadBalancerACLItem {
     
 
     $global:object = New-Object -TypeName PSCustomObject -Property @{
-        "accesslist"=@()
+        "accessList"=@()
         }
 
-     $object.accesslist += New-Object -TypeName PSCustomObject -Property @{
+     $object.accessList += New-Object -TypeName PSCustomObject -Property @{
             "address"=$IP;
-            "type"=$Action  
+            "type"=$Action.toupper()  
             }
         
  
@@ -997,8 +1035,7 @@ function Add-CloudLoadBalancerACLItem {
 
     Write-Host "The ACL item has been added."
 
-    Get-CloudLoadBalancerACLs -Account $account -CloudLBID $CloudLBID 
-    
+       
 
 <#
  .SYNOPSIS
@@ -1806,26 +1843,30 @@ function Add-CloudLoadBalancerHealthMonitor {
 
 
     if ($type -eq "CONNECT"){
-        $global:object = New-Object -TypeName PSCustomObject -Property @{
-            "type"=$type;
-            "delay"=$MonitorDelay;
-            "timeout"=$MonitorTimeout;
-            "attemptsBeforeDeactivation"=$MonitorFailureAttempts
+            $global:object = New-Object -TypeName PSCustomObject -Property @{
+                "healthMonitor"=New-Object -TypeName PSCustomObject -Property @{
+                    "type"=$type;
+                    "delay"=$MonitorDelay;
+                    "timeout"=$MonitorTimeout;
+                    "attemptsBeforeDeactivation"=$MonitorFailureAttempts
+                }
             }
         }
 
     else {
         $global:object = New-Object -TypeName PSCustomObject -Property @{
-            "type"=$type;
-            "delay"=$MonitorDelay;
-            "timeout"=$MonitorTimeout;
-            "attemptsBeforeDeactivation"=$MonitorFailureAttempts;
-            "path"=$MonitorHTTPPath;
-            "statusRegex"=$MonitorStatusRegex;
-            "bodyRegex"=$MonitorBodyRegex;
-            "hostHeader"=$MonitorHostHeader
+                "healthMonitor"=New-Object -TypeName PSCustomObject -Property @{
+                    "type"=$type;
+                    "delay"=$MonitorDelay;
+                    "timeout"=$MonitorTimeout;
+                    "attemptsBeforeDeactivation"=$MonitorFailureAttempts;
+                    "path"=$MonitorHTTPPath;
+                    "statusRegex"=$MonitorStatusRegex;
+                    "bodyRegex"=$MonitorBodyRegex;
+                    "hostHeader"=$MonitorHostHeader
+                    }
+                }
             }
-        }
     
     $Global:JSONbody = $object | ConvertTo-Json -Depth 3
     
@@ -1833,10 +1874,8 @@ function Add-CloudLoadBalancerHealthMonitor {
 
     Write-Host "Health Monitoring has now been enabled."
 
-    Get-CloudLoadBalancerDetails -account $account -CloudLBID $CloudLBID
-
-
-<#
+    
+  <#
  .SYNOPSIS
  The Add-HealthMonitor cmdlet will enable health monitoring on a cloud load balancer in the specified region.
 
@@ -2137,102 +2176,97 @@ function Get-CloudLoadBalancerSSLTermination {
 function Add-CloudLoadBalancerSSLTermination {
 
     Param(
-        [Parameter(Position=0,Mandatory=$true)]
-        [string]$CloudLBID,
-        [Parameter(Position=1,Mandatory=$true)]
-        [string]$SSLPort,
-        [Parameter(Position=2,Mandatory=$true)]
-        [string]$PrivateKey,
-        [Parameter(Position=3,Mandatory=$true)]
-        [string]$Certificate,
-        [Parameter(Position=4,Mandatory=$false)]
-        [string]$IntermediateCertificate,
-        [Parameter(Position=5,Mandatory=$false)]
-        [switch]$Enabled,
-        [Parameter(Position=6,Mandatory=$false)]
-        [switch]$SecureTrafficOnly,
-        [Parameter(Position=7,Mandatory=$true)]
-        [string]$Region
+        [Parameter (Position=0, Mandatory=$True)][string] $Account = $(throw "-Account required"),
+        [Parameter(Position=1,Mandatory=$true)][string]$CloudLBID,
+        [Parameter(Position=2,Mandatory=$true)][int]$SSLPort,
+        [Parameter(Position=3,Mandatory=$true)][string]$PrivateKey,
+        [Parameter(Position=4,Mandatory=$true)][string]$Certificate,
+        [Parameter(Position=5,Mandatory=$false)][string]$IntermediateCertificate,
+        [Parameter(Position=6,Mandatory=$false)][switch]$Enabled,
+        [Parameter(Position=7,Mandatory=$false)][switch]$SecureTrafficOnly,
+        [Parameter (Position=8, Mandatory=$False)][string]$RegionOverride
     )
 
     
-    ## Setting variables needed to execute this function
-    Set-Variable -Name lonLBURI -Value "https://lon.loadbalancers.api.rackspacecloud.com/v1.0/$CloudDDI/loadbalancers/$CloudLBID/ssltermination.xml"
-    Set-Variable -Name ORDLBURI -Value "https://ord.loadbalancers.api.rackspacecloud.com/v1.0/$CloudDDI/loadbalancers/$CloudLBID/ssltermination.xml"
+    if ($RegionOverride){
+        $Global:RegionOverride = $RegionOverride
+    }
+
+        
+    # Retrieving authentication token
+    Get-AuthToken($account)  
+
+    # Setting variables needed to execute this function
+    $URI = (Get-CloudURI("loadbalancers")) + "/loadbalancers/$CloudLBID/ssltermination"
+
 
     if (($enabled) -and ($SecureTrafficOnly)) {
         
-        [xml]$SSLTerminationXMLBody = '<sslTermination xmlns="http://docs.openstack.org/loadbalancers/api/v1.0" enabled="true" securePort="'+$SSLPort+'" secureTrafficOnly="true">
-        <privatekey>'+$PrivateKey+'</privatekey>
-        <certificate>'+$Certificate+'</certificate>
-        <intermediateCertificate>'+$IntermediateCertificate+'</intermediateCertificate>
-        </sslTermination>'
-       
-    }
-
-    elseif (($enabled) -and (!$SecureTrafficOnly)) {
+        $object = New-Object -TypeName PSCustomObject -Property @{
+            "sslTermination"=New-Object -TypeName PSCustomObject -Property @{
+                "enabled"="true";
+                "securePort"=$SSLPort;
+                "secureTrafficOnly"="true";
+                "privatekey"=$PrivateKey;
+                "certificate"=$Certificate;
+                "intermediateCertificate"=$IntermediateCertificate
+                }
+            }
+        }
         
-        [xml]$SSLTerminationXMLBody = '<sslTermination xmlns="http://docs.openstack.org/loadbalancers/api/v1.0" enabled="true" securePort="'+$SSLPort+'" secureTrafficOnly="false">
-        <privatekey>'+$PrivateKey+'</privatekey>
-        <certificate>'+$Certificate+'</certificate>
-        <intermediateCertificate>'+$IntermediateCertificate+'</intermediateCertificate>
-        </sslTermination>'
-       
-    }
+    elseif (($enabled) -and (!$SecureTrafficOnly)) {
 
+     $object = New-Object -TypeName PSCustomObject -Property @{
+            "sslTermination"=New-Object -TypeName PSCustomObject -Property @{
+                "enabled"="true";
+                "securePort"=$SSLPort;
+                "secureTrafficOnly"="false";
+                "privatekey"=$PrivateKey;
+                "certificate"=$Certificate;
+                "intermediateCertificate"=$IntermediateCertificate
+                }
+            }
+        }
+        
     elseif ((!$enabled) -and ($SecureTrafficOnly)) {
         
-        [xml]$SSLTerminationXMLBody = '<sslTermination xmlns="http://docs.openstack.org/loadbalancers/api/v1.0" enabled="false" securePort="'+$SSLPort+'" secureTrafficOnly="true">
-        <privatekey>'+$PrivateKey+'</privatekey>
-        <certificate>'+$Certificate+'</certificate>
-        <intermediateCertificate>'+$IntermediateCertificate+'</intermediateCertificate>
-        </sslTermination>'
-       
-    }
+         $object = New-Object -TypeName PSCustomObject -Property @{
+            "sslTermination"=New-Object -TypeName PSCustomObject -Property @{
+                "enabled"="false";
+                "securePort"=$SSLPort;
+                "secureTrafficOnly"="true";
+                "privatekey"=$PrivateKey;
+                "certificate"=$Certificate;
+                "intermediateCertificate"=$IntermediateCertificate
+                }
+            }
+        }
+        
 
     elseif ((!$enabled) -and (!$SecureTrafficOnly)) {
         
-        [xml]$SSLTerminationXMLBody = '<sslTermination xmlns="http://docs.openstack.org/loadbalancers/api/v1.0" enabled="false" securePort="'+$SSLPort+'" secureTrafficOnly="false">
-        <privatekey>'+$PrivateKey+'</privatekey>
-        <certificate>'+$Certificate+'</certificate>
-        <intermediateCertificate>'+$IntermediateCertificate+'</intermediateCertificate>
-        </sslTermination>'
-       
-    }
-
-    if ($Region -eq "lon") {
+         $object = New-Object -TypeName PSCustomObject -Property @{
+            "sslTermination"=New-Object -TypeName PSCustomObject -Property @{
+                "enabled"="false";
+                "securePort"=$SSLPort;
+                "secureTrafficOnly"="false";
+                "privatekey"=$PrivateKey;
+                "certificate"=$Certificate;
+                "intermediateCertificate"=$IntermediateCertificate
+                }
+            }
+        }
+    
+    $JSONbody = $object | ConvertTo-Json -Depth 3
+   
+    Invoke-RestMethod -Uri $URI -Headers $HeaderDictionary -Body $JSONBody -ContentType application/json -Method Put -ErrorAction Stop | Out-Null
         
-        # Retrieving authentication token
-        Get-AuthToken
+    Write-Host "SSL termination has been configured."
         
-        Invoke-RestMethod -Uri $lonLBURI -Headers $HeaderDictionary -Body $SSLTerminationXMLBody -ContentType application/xml -Method Put -ErrorAction Stop | Out-Null
-        
-        Write-Host "SSL termination has been configured.  Please wait 10 seconds for confirmation:"
-
-        Sleep 10
-
-        Get-SSLTermination -CloudLBID $CloudLBID -Region $Region
-    }
-    elseif ($Region -eq "ORD") {
-
-        # Retrieving authentication token
-        Get-AuthToken
-        
-        Invoke-RestMethod -Uri $ORDLBURI -Headers $HeaderDictionary -Body $SSLTerminationXMLBody -ContentType application/xml -Method Put -ErrorAction Stop | Out-Null
-        
-        Write-Host "SSL termination has been configured.  Please wait 10 seconds for confirmation:"
-
-        Sleep 10
-
-        Get-SSLTermination -CloudLBID $CloudLBID -Region $Region
-    }
-    else {
-        Write-Host "Meh, something is broken"
-    }
 
 <#
  .SYNOPSIS
- The Add-SSLTermination cmdlet will add SSL termination to a cloud load balancer in the specified region.
+ The Add-CloudLoadBalancerSSLTermination cmdlet will add SSL termination to a cloud load balancer in the specified region.
 
  .DESCRIPTION
  See synopsis.
@@ -2258,12 +2292,16 @@ function Add-CloudLoadBalancerSSLTermination {
  .PARAMETER SecureTrafficOnly
  Use this switch to indicate if the load balancer may accept only secure traffic. If the SecureTrafficOnly switch is passed, the load balancer will NOT accept non-secure traffic. 
 
- .PARAMETER Region
- Use this parameter to indicate the region in which you would like to execute this request.  Valid choices are "lon" or "ORD" (without the quotes).
+ .PARAMETER Account
+ Use this parameter to indicate which account you would like to execute this request against. 
+ Valid choices are defined in PoshNova configuration file.
+
+ .PARAMETER RegionOverride
+ This parameter will temporarily override the default region set in PoshNova configuration file.
 
  .EXAMPLE
- PS C:\Users\Administrator> Add-SSLTermination -CloudLBID 116351 -SSLPort 443 -PrivateKey "PrivateKeyGoesHereInQuotes" -Certificate "CertificateGoesHereInQuotes" -Enabled -Region ORD
- This example shows how to add SSL termination to a cloud load balancer in the ORD region.
+ PS C:\Users\Administrator> Add-CloudLoadBalancerSSLTermination -CloudLBID 116351 -SSLPort 443 -PrivateKey "PrivateKeyGoesHereInQuotes" -Certificate "CertificateGoesHereInQuotes" -Enabled -account prod
+  This example shows how to add SSL termination to a cloud load balancer in the ORD region.
 
  .LINK
  http://docs.rackspace.com/loadbalancers/api/v1.0/clb-devguide/content/SSLTermination-d1e2479.html
@@ -2271,21 +2309,20 @@ function Add-CloudLoadBalancerSSLTermination {
 #>
 }
 
-function Update-SSLTermination {
+function Update-CloudLoadBalancerSSLTermination {
 
     Param(
         [Parameter (Position=0, Mandatory=$True)][string] $Account = $(throw "-Account required"),
         [Parameter(Position=1,Mandatory=$true)][string]$CloudLBID,
         [Parameter(Position=2,Mandatory=$false)][switch]$EnableSSLTermination,
         [Parameter(Position=3,Mandatory=$false)][switch]$DisableSSLTermination,
-        [Parameter(Position=4,Mandatory=$false)][switch]$UpdateSSLPort,
-        [Parameter(Position=5,Mandatory=$false)][string]$SSLPort,
-        [Parameter(Position=6,Mandatory=$false)][switch]$EnableSecureTrafficOnly,
-        [Parameter(Position=7,Mandatory=$false)][switch]$DisableSecureTraficOnly,
-        [Parameter (Position=8, Mandatory=$False)][string]$RegionOverride
+        [Parameter(Position=4,Mandatory=$false)][int]$UpdateSSLPort,
+        [Parameter(Position=5,Mandatory=$false)][switch]$EnableSecureTrafficOnly,
+        [Parameter(Position=6,Mandatory=$false)][switch]$DisableSecureTraficOnly,
+        [Parameter (Position=7, Mandatory=$False)][string]$RegionOverride
         
-   )
-
+        )
+    
 
     if ($RegionOverride){
         $Global:RegionOverride = $RegionOverride
@@ -2297,59 +2334,61 @@ function Update-SSLTermination {
 
     # Setting variables needed to execute this function
     $URI = (Get-CloudURI("loadbalancers")) + "/loadbalancers/$CloudLBID/ssltermination"
-
-
-    # Setting variables needed to execute this function
-    Set-Variable -Name lonLBURI -Value "https://lon.loadbalancers.api.rackspacecloud.com/v1.0/$CloudDDI/loadbalancers/$CloudLBID/ssltermination.xml"
-    Set-Variable -Name ORDLBURI -Value "https://ord.loadbalancers.api.rackspacecloud.com/v1.0/$CloudDDI/loadbalancers/$CloudLBID/ssltermination.xml"
-
+        
 
     if ($EnableSSLTermination) {
     
         $object = New-Object -TypeName PSCustomObject -Property @{
             "sslTermination"=New-Object -TypeName PSCustomObject -Property @{
-                "enabled"="true";
+                "enabled"="true"
                 }
             }
         }
+
     elseif ($DisableSSLTermination) {    
     
         $object = New-Object -TypeName PSCustomObject -Property @{
             "sslTermination"=New-Object -TypeName PSCustomObject -Property @{
-                "enabled"="false";
+                "enabled"="false"
                 }
             }
         }
+
     elseif ($EnableSecureTrafficOnly) {
         $object = New-Object -TypeName PSCustomObject -Property @{
             "sslTermination"=New-Object -TypeName PSCustomObject -Property @{
-                "secureTrafficOnly"="true";
+                "secureTrafficOnly"="true"
                 }
             }
         }
+
     elseif ($DisableSecureTrafficOnly) {
         $object = New-Object -TypeName PSCustomObject -Property @{
             "sslTermination"=New-Object -TypeName PSCustomObject -Property @{
-                "secureTrafficOnly"="false";
+                "secureTrafficOnly"="false"
                 }
+            }
         }
+
     elseif ($UpdateSSLPort) {
         $object = New-Object -TypeName PSCustomObject -Property @{
             "sslTermination"=New-Object -TypeName PSCustomObject -Property @{
-                "securePort"=$SSLPort;
+                "securePort"=$UpdateSSLPort
                 }
-        }
+            }
+         }
         
-    $JSONbody = $object | ConvertTo-Json -Depth 3
+        
+    $global:JSONbody = $object | ConvertTo-Json -Depth 3
 
-    Invoke-RestMethod -Uri $URI -Headers $HeaderDictionary -Body $JSONBody -ContentType application/xml -Method Put -ErrorAction Stop | Out-Null
+    Invoke-RestMethod -Uri $URI -Headers $HeaderDictionary -Body $JSONBody -ContentType application/json -Method Put -ErrorAction Stop | Out-Null
         
     Write-Host "SSL termination configuration has been updated."
 
     
 <#
  .SYNOPSIS
- The Update-SSLTermination cmdlet will add SSL termination to a cloud load balancer in the specified region.
+ The Update-CloudLoadBalancerSSLTermination cmdlet will add SSL termination to a cloud load balancer in the specified region.
 
  .DESCRIPTION
  Using this cmdlet, you can alter the port in which you would like to accept secure traffic, whether or not you would like the load balancer to be SSL ONLY, and whether or not SSL termination is active or simply configured and standing by.
@@ -2359,10 +2398,7 @@ function Update-SSLTermination {
 
  .PARAMETER UpdateSSLPort
  Use this switch to indicate that you would like to update the port which your load balancer will be accepting secure traffic on. Define the new port with the SSLPort parameter.
- 
- .PARAMETER SSLPort
- Use this parameter to define the port on which the SSL termination load balancer will listen for secure traffic. The SSLPort must be unique to the existing LB protocol/port combination. For example, port 443. Use this in conjunction with the UpdateSSLPort switch.
-
+  
  .PARAMETER EnableSSLTermination
  Use this switch to indicate that SSL termination can be enabled on the specified load balancer. If this switch is passed, the load balancer will enact its configuration for SSL termination.
 
@@ -2383,7 +2419,7 @@ function Update-SSLTermination {
  This parameter will temporarily override the default region set in PoshNova configuration file.
 
  .EXAMPLE
- PS C:\Users\Administrator> Update-SSLTermination -CloudLBID 116351 -DisableSSLTrafficOnly -account prod
+ PS C:\Users\Administrator> Update-CloudLoadBalancerSSLTermination -CloudLBID 116351 -DisableSSLTrafficOnly -account prod
  This example shows how to update the SSL termination settings of a cloud load balancer in the account prod region. This example would configure the load balancer to accept both non-secure and secure traffic.
 
  .LINK
@@ -2411,12 +2447,7 @@ function Remove-CloudLoadBalancerSSLTermination {
     $URI = (Get-CloudURI("loadbalancers")) + "/loadbalancers/$CloudLBID/ssltermination"
     
     $SSLTermination = Invoke-RestMethod -Uri $URI -Headers $HeaderDictionary -Method Delete -ErrorAction Stop
-
-    if (!$SSLTermination) {
-        Write-Host "`nNo SSL termination configured on load balancer" -ForegroundColor Red
-        break;
-    }
-        
+              
     Write-Host "All SSL settings have been removed."
     
 <#
