@@ -128,7 +128,8 @@ function Get-CloudURI {
                 "loadbalancers",
                 "blockstorage", 
                 "identity",
-                "autoscale"
+                "autoscale",
+                "monitoring"
             )] 
             [string] $ServiceName
     )
@@ -174,6 +175,10 @@ function Get-CloudURI {
             }
             "autoscale" {
                 $CloudURI = "https://" + $URIRegion + "." + $ServiceName + ".api.rackspacecloud.com/v1.0/" + $Credentials.CloudDDI
+                break;
+            }
+            "monitoring" {
+                $CloudURI = "https://" + $ServiceName + ".api.rackspacecloud.com/v1.0/" + $Credentials.CloudDDI
                 break;
             }
             default {
