@@ -20,12 +20,9 @@ CLB v1.0 API reference
 http://docs.rackspace.com/loadbalancers/api/v1.0/clb-devguide/content/Overview-d1e82.html
 
 Get-CloudLoadBalancerDetails
-Add-CloudLoadBalancer
-
 
 - Needs testing
 
-Update-CloudLoadBalancerSSLTermination
 
 - Complete
 
@@ -56,10 +53,12 @@ Add-CloudLoadBalancerSessionPersistence
 Add-CloudLoadBalancerSSLTermination
 Add-CloudLoadBalancerHealthMonitor
 Add-CloudLoadBalancerACLItem
+Add-CloudLoadBalancer
 Update-CloudLoadBalancerConnectionThrottling
 Update-CloudLoadBalancerSessionPersistence
 Update-CloudLoadBalancerNode
 Update-CloudLoadBalancer
+Update-CloudLoadBalancerSSLTermination
 
 
 ############################################################################################>
@@ -136,10 +135,10 @@ function Get-CloudLoadBalancerDetails {
 
 
     # Setting variables needed to execute this function
-    $Global:URI = (Get-CloudURI("loadbalancers")) + "/loadbalancers/$CloudLBID"
+    URI = (Get-CloudURI("loadbalancers")) + "/loadbalancers/$CloudLBID"
     $URI2 = (Get-CloudURI("loadbalancers")) + "/loadbalancers/$CloudLBID/contentcaching"
 
-    $global:LBDetail = (Invoke-RestMethod -Uri $URI  -Headers $HeaderDictionary -Method Get)
+    LBDetail = (Invoke-RestMethod -Uri $URI  -Headers $HeaderDictionary -Method Get)
        
 
     # Handling empty response bodies indicating that no servers exist in the queried data center
@@ -263,7 +262,7 @@ function Get-CloudLoadBalancerAlgorithms{
         
 
     # Making the call to the API for a list of available load balancers and storing data into a variable
-    $Global:LBAlgorithmList = (Invoke-RestMethod -Uri $URI  -Headers $HeaderDictionary).algorithms
+    LBAlgorithmList = (Invoke-RestMethod -Uri $URI  -Headers $HeaderDictionary).algorithms
    
 
     # Since the response body is XML, we can use dot notation to show the information needed without further parsing.
@@ -294,73 +293,58 @@ function Get-CloudLoadBalancerAlgorithms{
 #>
 }
 
-<#
 function Add-CloudLoadBalancer {
     
     Param(
-        [Parameter(Position=0,Mandatory=$true)][string]$CloudLBName,
-        [Parameter(Position=1,Mandatory=$true)][string]$CloudLBPort,
-        [Parameter(Position=2,Mandatory=$true)][string]$CloudLBProtocol,
-        [Parameter(Position=3,Mandatory=$true)][string]$CloudLBAlgorithm,
-        [Parameter(Position=4,Mandatory=$true)][string]$CloudLBNodeIP,
-        [Parameter(Position=5,Mandatory=$true)][string]$CloudLBNodePort,
-        [Parameter(Position=6,Mandatory=$true)][string]$CloudLBNodeCondition,
-        [Parameter (Position=7,Mandatory=$False)][string]$RegionOverride,
-        [Parameter(Position=8,Mandatory=$true)][string]$Account
+        [Parameter(Position=0,Mandatory=$true)][string]$Account,
+        [Parameter(Position=1,Mandatory=$true)][string]$CloudLBName,
+        [Parameter(Position=2,Mandatory=$true)][int]$CloudLBPort,
+        [Parameter(Position=3,Mandatory=$false)][string][ValidateSet("DNS_TCP", "DNS_UDP", "FTP", "HTTP", "HTTPS", "IMAPS", "IMAPv2", "IMAPv3", "IMAPv4", "LDAP", "LDAPS", "MYSQL", "POP3", "POP3S", "SFTP", "SMTP", "TCP", "TCP_CLIENT_FIRST", "UDP", "UDP_STREAM")]$CloudLBProtocol,
+        [Parameter(Position=4,Mandatory=$false)][string][ValidateSet("LEAST_CONNECTIONS", "RANDOM", "ROUND_ROBIN", "WEIGHTED_LEAST_CONNECTIONS","WEIGHTED_ROUND_ROBIN")]$CloudLBAlgorithm,
+        [Parameter(Position=5,Mandatory=$false)][string][ValidateSet("ENABLED", "DISABLED")]$CloudLBNodeCondition,
+        [Parameter(Position=6,Mandatory=$true)][string]$CloudLBNodeIP,
+        [Parameter(Position=7,Mandatory=$true)][int]$CloudLBNodePort,
+        [Parameter(Position=8,Mandatory=$False)][string]$RegionOverride
+        
     )
-
-    try {
-        
-        # Retrieving authentication token
-        Get-AuthToken($account)
+              
+    # Retrieving authentication token
+    Get-AuthToken($account)
        
-
-        # Setting variables needed to execute this function
-        $URI = (Get-CloudURI("loadbalancers")) + "/loadbalancers"
-        
 
     # Setting variables needed to execute this function
-    Set-Variable -Name NewLBURI -Value "https://$region.loadbalancers.api.rackspacecloud.com/v1.0/$CloudDDI/loadbalancers.xml"
+    $URI = (Get-CloudURI("loadbalancers")) + "/loadbalancers"
 
-    [xml]$NewCloudLBXMLBody = '<loadBalancer xmlns="http://docs.openstack.org/loadbalancers/api/v1.0"
-	name="'+$CloudLBName+'" 
-	port="'+$CloudLBPort+'"
-	protocol="'+$CloudLBProtocol.ToUpper()+'"
-    algorithm="'+$CloudLBAlgorithm.ToUpper()+'">
-	<virtualIps>
-		<virtualIp type="PUBLIC"/>
-	</virtualIps>
-	<nodes>
-		<node address="'+$CloudLBNodeIP+'" port="'+$CloudLBNodePort+'" condition="'+$CloudLBNodeCondition.ToUpper()+'"/>
-	</nodes>
-</loadBalancer>'
- 
-    Get-AuthToken
-       
-    $NewCloudLB = Invoke-RestMethod -Uri $NewLBURI -Headers $HeaderDictionary -Body $NewCloudLBXMLBody -ContentType application/xml -Method Post -ErrorAction Stop
-    [xml]$NewCloudLBInfo = $NewCloudLB.innerxml
-
-    Write-Host "The following is the information for your new CLB. A refreshed CLB list will appear in 10 seconds."
-
-    $lbip0 = $NewCloudLB.loadBalancer.virtualIps.virtualIp
-    $nodeip0 = $NewCloudLB.loadBalancer.nodes.node
-    $lbipfinal = ForEach ($ip in $lbip0) {
-        New-Object psobject -Property @{
-            IP = $ip.address
-	    }
-    }
-    $nodeipfinal = ForEach ($ip in $nodeip0) {
-        New-Object psobject -Property @{
-            IP = $ip.address
-	    }
-    }
-    $LBDetailOut = @{"CLB Name"=($NewCloudLB.loadbalancer.name);"CLB ID"=($NewCloudLB.loadbalancer.id);"CLB Algorithm"=($NewCloudLB.loadbalancer.algorithm);"CLB Protocol"=($NewCloudLB.loadbalancer.protocol);"CLB Port"=($NewCloudLB.loadbalancer.port);"CLB Status"=($NewCloudLB.loadbalancer.status);"CLB IP(s)"=($LBIPFinal.ip);"CLB Session Persistence"=($NewCloudLB.loadbalancer.sessionpersistence.persistenceType);"CLB Created"=($NewCloudLB.loadbalancer.created.time);"CLB Updated"=($NewCloudLB.loadbalancer.updated.time);"- CLB Node ID(s)"=($NewCloudLB.loadbalancer.nodes.node.id);"- CLB Node IP"=($NodeIPFinal.IP);"- CLB Node Port"=($NewCloudLB.loadbalancer.nodes.node.port);"- CLB Node Condition"=($NewCloudLB.loadbalancer.nodes.node.condition);"- CLB Node Status"=($NewCloudLB.loadbalancer.nodes.node.status)}
-    $LBDetailOut.GetEnumerator() | Sort-Object -Property Name -Descending
+    # Setting variables needed to execute this function
     
-    Sleep 10
-    Get-CloudLoadBalancers -Account $account
+    $object = New-Object -TypeName PSCustomObject -Property @{
+        "loadBalancer"=New-Object -TypeName PSCustomObject -Property @{
+            "name"=$CloudLBName;
+	        "port"=$CloudLBPort;
+	        "protocol"=$CloudLBProtocol.ToUpper();
+            "algorithm"=$CloudLBAlgorithm.ToUpper();
+            "virtualIps"=@();
+            "nodes"=@()
+            }
+        }
+        
+    $object.loadBalancer.virtualIps += New-Object -TypeName PSCustomObject -Property @{
+        "type"="PUBLIC"
+        }
 
-<#
+    $object.loadBalancer.nodes += New-Object -TypeName PSCustomObject -Property @{
+            "address"=$CloudLBNodeIP;
+            "port"=$CloudLBNodePort; 
+            "condition"=$CloudLBNodeCondition.ToUpper()
+             }
+             
+    JSONbody = $object | ConvertTo-Json -Depth 3
+
+    $NewCloudLB = Invoke-RestMethod -Uri $URI -Headers $HeaderDictionary -Body $JSONBody -ContentType application/json -Method Post -ErrorAction Stop
+    $NewCloudLB.loadBalancer
+
+    
+ <#
  .SYNOPSIS
  The Add-CloudLoadBalancer cmdlet will create a new Rackspace cloud load balancer in the specified region.
 
@@ -377,7 +361,13 @@ function Add-CloudLoadBalancer {
  Use this parameter to define the protocol that will bind to this load balancer.  If you are unsure, you can get a list of supported protocols and ports by running the "Get-LoadBalancerProtocols" cmdlet.
 
  .PARAMETER CloudLBAlgorithm
- Use this parameter to define the load balancing algorithm you'd like to use with your new load balancer.  If you are unsure, you can get a list of supported algorithms by running the "Get-LoadBalancerAlgorithms" cmdlet.
+ Use this parameter to define the load balancing algorithm you'd like to use with your load balancer.  If you are unsure, you can get a list of supported algorithms by running the "Get-CloudLoadBalancerAlgorithms" cmdlet.
+
+ LEAST_CONNECTIONS
+ RANDOM
+ ROUND_ROBIN
+ WEIGHTED_LEAST_CONNECTIONS
+ WEIGHTED_ROUND_ROBIN
 
  .PARAMETER CloudLBNodeIP
  Use this parameter to define the private IP address of the first node you wish to have served by this load balancer. This must be a functional and legitimate IP, or this command will fail run properly.
@@ -402,6 +392,7 @@ function Add-CloudLoadBalancer {
  http://docs.rackspace.com/loadbalancers/api/v1.0/clb-devguide/content/Create_Load_Balancer-d1e1635.html
 
 #>
+}
 
 function Get-CloudLoadBalancerNodeList{
 
@@ -423,7 +414,7 @@ function Get-CloudLoadBalancerNodeList{
     $URI = (Get-CloudURI("loadbalancers")) + "/loadbalancers/$CloudLBID/nodes"
 
     # Making the call to the API for a list of available server images and storing data into a variable
-	$Global:NodeList = (Invoke-RestMethod -Uri $URI  -Headers $HeaderDictionary)
+	NodeList = (Invoke-RestMethod -Uri $URI  -Headers $HeaderDictionary)
 
     # Since the response body is JSON, we can use dot notation to show the information needed without further parsing.
 	return $NodeList.Nodes;
@@ -486,11 +477,11 @@ function Add-CloudLoadBalancerNode {
     $URI = (Get-CloudURI("loadbalancers")) + "/loadbalancers/$CloudLBID/nodes"
 
     
-    $global:object = New-Object -TypeName PSCustomObject -Property @{
+    object = New-Object -TypeName PSCustomObject -Property @{
             "nodes"=@()
             }
 
-     $object.nodes += New-Object -TypeName PSCustomObject -Property @{
+    $object.nodes += New-Object -TypeName PSCustomObject -Property @{
             "address"=$CloudLBNodeIP;
             "port"=$CloudLBNodePort;
             "condition"=$CloudLBNodeCondition;
@@ -502,7 +493,7 @@ function Add-CloudLoadBalancerNode {
     
     $NewCloudLBNode = Invoke-RestMethod -Uri $URI -Headers $HeaderDictionary -Body $JSONbody -ContentType application/json -Method Post -ErrorAction Stop
    	Write-Host "The node has been added as follows:"
-    $NewCloudLBNode.nodes
+    return $NewCloudLBNode.nodes
 	
 
 <#
@@ -684,22 +675,18 @@ function Update-CloudLoadBalancer {
 
     $LBObject = New-Object -TypeName PSCustomObject -Property @{}
     $LBObject | Add-Member -MemberType NoteProperty -Name "name" -Value $CloudLBName
-
-        
-     
-    if ($CloudLBPort) {        $LBObject | Add-Member -MemberType NoteProperty -Name "port" -Value $CloudLBPort
+         
+    if ($CloudLBPort) {        
+        $LBObject | Add-Member -MemberType NoteProperty -Name "port" -Value $CloudLBPort
         }
-        
             
      if ($CloudLBProtocol) {
         $LBObject | Add-Member -MemberType NoteProperty -Name "protocol" -Value $CloudLBProtocol.ToUpper()
         }
-        
 
     if ($CloudLBAlgorithm) {
         $LBObject | Add-Member -MemberType NoteProperty -Name "algorithm" -Value $CloudLBAlgorithm.ToUpper()
         }
-         
 
     if ($CloudLBTimeout) {
         $LBObject | Add-Member -MemberType NoteProperty -Name "timeout" -Value $CloudLBTimeout
@@ -709,14 +696,11 @@ function Update-CloudLoadBalancer {
         "loadBalancer"= $LBObject
         }
 
-   
-    $global:JSONbody = $object | ConvertTo-Json -Depth 3
+    JSONbody = $object | ConvertTo-Json -Depth 3
         
     $UpdateCloudLB = Invoke-RestMethod -Uri $URI -Headers $HeaderDictionary -Body $JSONBody -ContentType application/json -Method Put -ErrorAction Stop
 
     Write-Host "Your load balancer has been updated"
-
-    #Get-CloudLoadBalancerDetails -Account $account -CloudLBID $CloudLBID
 
 <#
  .SYNOPSIS
@@ -778,6 +762,7 @@ function Update-CloudLoadBalancerNode {
         [Parameter(Position=6,Mandatory=$false)][string]$RegionOverride
     )
 
+    
 
      if ($RegionOverride){
         $Global:RegionOverride = $RegionOverride
@@ -825,7 +810,7 @@ function Update-CloudLoadBalancerNode {
             }
     }
 
-    $global:JSONbody = $object | ConvertTo-Json
+    JSONbody = $object | ConvertTo-Json
     
     Invoke-RestMethod -Uri $URI -Headers $HeaderDictionary -Body $JSONBody -ContentType application/json -Method Put -ErrorAction Stop
 
@@ -969,7 +954,7 @@ function Get-CloudLoadBalancerACLs {
         Write-Host "This load balancer does not currently have any ACLs configured." -ForegroundColor Red
     }
     else {
-        $AccessList.accessList.networkItem | ft -AutoSize
+       return $AccessList.accessList.networkItem | ft -AutoSize
     }
 
 <#
@@ -1019,17 +1004,17 @@ function Add-CloudLoadBalancerACLItem {
     $URI = (Get-CloudURI("loadbalancers")) + "/loadbalancers/$CloudLBID/accesslist"
     
 
-    $global:object = New-Object -TypeName PSCustomObject -Property @{
+    object = New-Object -TypeName PSCustomObject -Property @{
         "accessList"=@()
         }
 
-     $object.accessList += New-Object -TypeName PSCustomObject -Property @{
+    $object.accessList += New-Object -TypeName PSCustomObject -Property @{
             "address"=$IP;
             "type"=$Action.toupper()  
             }
         
  
-    $Global:JSONbody = $object | ConvertTo-Json -Depth 3
+    JSONbody = $object | ConvertTo-Json -Depth 3
              
     Invoke-RestMethod -Uri $URI -Headers $HeaderDictionary -Body $JSONBody -ContentType application/json -Method Post -ErrorAction Stop
 
@@ -1220,7 +1205,7 @@ function Add-CloudLoadBalancerSessionPersistence {
             }
         }
 
-    $Global:JSONbody = $object | ConvertTo-Json -Depth 3
+    JSONbody = $object | ConvertTo-Json -Depth 3
                
     # Making the call to the API
     $AddPersistence = Invoke-RestMethod -Uri $URI  -Headers $HeaderDictionary -ContentType application/json -Body $JSONBody -Method Put -ErrorAction Stop
@@ -1296,7 +1281,7 @@ function Update-CloudLoadBalancerSessionPersistence {
             }
         }
 
-        $Global:JSONbody = $object | ConvertTo-Json -Depth 3
+        JSONbody = $object | ConvertTo-Json -Depth 3
 
 
         # Making the call to the API
@@ -1424,14 +1409,14 @@ function Add-CloudLoadBalancerConnectionLogging {
     # Setting variables needed to execute this function
     $URI = (Get-CloudURI("loadbalancers")) + "/loadbalancers/$CloudLBID/connectionlogging"
 
-    $global:object = New-Object -TypeName PSCustomObject -Property @{
+    object = New-Object -TypeName PSCustomObject -Property @{
         "connectionLogging"=New-Object -TypeName PSCustomObject -Property @{
             "enabled"="true"
             }
         }
         
  
-    $Global:JSONbody = $object | ConvertTo-Json
+    JSONbody = $object | ConvertTo-Json
     
     Invoke-RestMethod -Uri $URI -Headers $HeaderDictionary -Body $JSONBody -ContentType application/json -Method Put -ErrorAction Stop
 
@@ -1490,13 +1475,13 @@ function Remove-CloudLoadBalancerConnectionLogging {
     # Setting variables needed to execute this function
     $URI = (Get-CloudURI("loadbalancers")) + "/loadbalancers/$CloudLBID/connectionlogging"
 
-    $global:object = New-Object -TypeName PSCustomObject -Property @{
+    object = New-Object -TypeName PSCustomObject -Property @{
         "connectionLogging"=New-Object -TypeName PSCustomObject -Property @{
             "enabled"="false"
             }
         }        
  
-    $Global:JSONbody = $object | ConvertTo-Json
+    JSONbody = $object | ConvertTo-Json
 
     Invoke-RestMethod -Uri $URI -Headers $HeaderDictionary -Body $JSONBody -ContentType application/json -Method Put -ErrorAction Stop
 
@@ -1557,7 +1542,7 @@ function Add-CloudLoadBalancerConnectionThrottling {
     # Setting variables needed to execute this function
     $URI = (Get-CloudURI("loadbalancers")) + "/loadbalancers/$CloudLBID/connectionthrottle"
 
-    $global:object = New-Object -TypeName PSCustomObject -Property @{
+    object = New-Object -TypeName PSCustomObject -Property @{
         "connectionThrottle"=New-Object -TypeName PSCustomObject -Property @{
             "minConnections"=$MinConnections;
             "maxConnections"=$MaxConnections;
@@ -1566,7 +1551,7 @@ function Add-CloudLoadBalancerConnectionThrottling {
             }
         }        
  
-    $Global:JSONbody = $object | ConvertTo-Json
+    JSONbody = $object | ConvertTo-Json
         
     Invoke-RestMethod -Uri $URI -Headers $HeaderDictionary -Body $JSONBody -ContentType application/json -Method Put -ErrorAction Stop
 
@@ -1636,7 +1621,7 @@ function Update-CloudLoadBalancerConnectionThrottling {
     # Setting variables needed to execute this function
     $URI = (Get-CloudURI("loadbalancers")) + "/loadbalancers/$CloudLBID/connectionthrottle"
 
-    $global:object = New-Object -TypeName PSCustomObject -Property @{
+    object = New-Object -TypeName PSCustomObject -Property @{
         "connectionThrottle"=New-Object -TypeName PSCustomObject -Property @{
             "minConnections"=$MinConnections;
             "maxConnections"=$MaxConnections;
@@ -1645,7 +1630,7 @@ function Update-CloudLoadBalancerConnectionThrottling {
             }
         }        
  
-    $Global:JSONbody = $object | ConvertTo-Json
+    JSONbody = $object | ConvertTo-Json
 
     Invoke-RestMethod -Uri $URI -Headers $HeaderDictionary -ContentType application/json -Body $JSONBody -Method Put -ErrorAction Stop
 
@@ -1843,7 +1828,7 @@ function Add-CloudLoadBalancerHealthMonitor {
 
 
     if ($type -eq "CONNECT"){
-            $global:object = New-Object -TypeName PSCustomObject -Property @{
+        object = New-Object -TypeName PSCustomObject -Property @{
                 "healthMonitor"=New-Object -TypeName PSCustomObject -Property @{
                     "type"=$type;
                     "delay"=$MonitorDelay;
@@ -1851,10 +1836,10 @@ function Add-CloudLoadBalancerHealthMonitor {
                     "attemptsBeforeDeactivation"=$MonitorFailureAttempts
                 }
             }
-        }
+    }
 
     else {
-        $global:object = New-Object -TypeName PSCustomObject -Property @{
+        object = New-Object -TypeName PSCustomObject -Property @{
                 "healthMonitor"=New-Object -TypeName PSCustomObject -Property @{
                     "type"=$type;
                     "delay"=$MonitorDelay;
@@ -1868,7 +1853,7 @@ function Add-CloudLoadBalancerHealthMonitor {
                 }
             }
     
-    $Global:JSONbody = $object | ConvertTo-Json -Depth 3
+    JSONbody = $object | ConvertTo-Json -Depth 3
     
     Invoke-RestMethod -Uri $URI -Headers $HeaderDictionary -Body $JSONBody -ContentType application/json -Method Put -ErrorAction Stop
 
@@ -2334,52 +2319,32 @@ function Update-CloudLoadBalancerSSLTermination {
 
     # Setting variables needed to execute this function
     $URI = (Get-CloudURI("loadbalancers")) + "/loadbalancers/$CloudLBID/ssltermination"
+     
+    $sslTerm = New-Object -TypeName PSCustomObject -Property @{}
+        
+     
+    if ($EnableSSLTermination) {$sslTerm | Add-Member -MemberType NoteProperty -Name "enabled" -Value "true"
+        }
         
 
-    if ($EnableSSLTermination) {
-    
-        $object = New-Object -TypeName PSCustomObject -Property @{
-            "sslTermination"=New-Object -TypeName PSCustomObject -Property @{
-                "enabled"="true"
-                }
-            }
+    if ($DisableSSLTermination) {$sslTerm | Add-Member -MemberType NoteProperty -Name "enabled" -Value "false"
         }
 
-    elseif ($DisableSSLTermination) {    
-    
-        $object = New-Object -TypeName PSCustomObject -Property @{
-            "sslTermination"=New-Object -TypeName PSCustomObject -Property @{
-                "enabled"="false"
-                }
-            }
+    if ($EnableSecureTrafficOnly) {$sslTerm | Add-Member -MemberType NoteProperty -Name "secureTrafficOnly" -Value "true"
         }
 
-    elseif ($EnableSecureTrafficOnly) {
-        $object = New-Object -TypeName PSCustomObject -Property @{
-            "sslTermination"=New-Object -TypeName PSCustomObject -Property @{
-                "secureTrafficOnly"="true"
-                }
-            }
+    if ($DisableSecureTraficOnly) {$sslTerm | Add-Member -MemberType NoteProperty -Name "secureTrafficOnly" -Value "false"
         }
 
-    elseif ($DisableSecureTrafficOnly) {
-        $object = New-Object -TypeName PSCustomObject -Property @{
-            "sslTermination"=New-Object -TypeName PSCustomObject -Property @{
-                "secureTrafficOnly"="false"
-                }
-            }
+    if ($UpdateSSLPort) {$sslTerm | Add-Member -MemberType NoteProperty -Name "securePort" -Value $UpdateSSLPort
         }
 
-    elseif ($UpdateSSLPort) {
-        $object = New-Object -TypeName PSCustomObject -Property @{
-            "sslTermination"=New-Object -TypeName PSCustomObject -Property @{
-                "securePort"=$UpdateSSLPort
-                }
-            }
-         }
-        
-        
-    $global:JSONbody = $object | ConvertTo-Json -Depth 3
+    $object = New-Object -TypeName PSCustomObject -Property @{
+        "sslTermination" = $sslTerm
+        }
+   
+           
+    JSONbody = $object | ConvertTo-Json -Depth 3
 
     Invoke-RestMethod -Uri $URI -Headers $HeaderDictionary -Body $JSONBody -ContentType application/json -Method Put -ErrorAction Stop | Out-Null
         
