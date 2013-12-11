@@ -11,6 +11,8 @@ PoshNova is a Microsoft PowerShell v3 script module intended for using directly 
 
 The primary intention of this project is to provide an easy-to-use tool to manage and automate environments hosted on Rackspace Public Cloud for Windows system administrators, DevOps engineers and developers alike. 
 
+**The first version of this tool is in very early stages of development and cmndlet names and syntax is likely to change as the tools evolves, so please be aware.**
+
 ###History
 This effort is a rewrite of Mitch Robin's original PowerClient module work, which was published on [developer.rackspace.com](http://developer.rackspace.com/blog/powerclient-rackspace-cloud-api-powershell-client.html)
 
