@@ -98,6 +98,40 @@ Initial release has been tested to work with the following services, using the d
 	- Remove-CloudBlockStorageSnap
 	- Mount-CloudBlockStorageVol
 	- Dismount-CloudBlockStorageVol
+- Cloud LoadBalancers
+	- Add-CloudLoadBalancer
+	- Add-CloudLoadBalancerACLItem
+	- Add-CloudLoadBalancerConnectionLogging
+	- Add-CloudLoadBalancerConnectionThrottling
+	- Add-CloudLoadBalancerContentCaching
+	- Add-CloudLoadBalancerHealthMonitor
+	- Add-CloudLoadBalancerNode
+	- Add-CloudLoadBalancerSessionPersistence
+	- Add-CloudLoadBalancerSSLTermination
+	- Get-CloudLoadBalancerACLs
+	- Get-CloudLoadBalancerAlgorithms
+	- Get-CloudLoadBalancerDetails
+	- Get-CloudLoadBalancerHealthMonitor
+	- Get-CloudLoadBalancerNodeEvents
+	- Get-CloudLoadBalancerNodeList
+	- Get-CloudLoadBalancerProtocols
+	- Get-CloudLoadBalancers
+	- Get-CloudLoadBalancerSSLTermination
+	- Remove-CloudLoadBalancer
+	- Remove-CloudLoadBalancerACL
+	- Remove-CloudLoadBalancerACLItem
+	- Remove-CloudLoadBalancerConnectionLogging
+	- Remove-CloudLoadBalancerConnectionThrottling
+	- Remove-CloudLoadBalancerContentCaching
+	- Remove-CloudLoadBalancerHealthMonitor
+	- Remove-CloudLoadBalancerNode
+	- Remove-CloudLoadBalancerSessionPersistence
+	- Remove-CloudLoadBalancerSSLTermination
+	- Update-CloudLoadBalancer
+	- Update-CloudLoadBalancerConnectionThrottling
+	- Update-CloudLoadBalancerNode
+	- Update-CloudLoadBalancerSessionPersistence
+	- Update-CloudLoadBalancerSSLTermination
 
 The tools is being constantly expanded to work with more Rackspace Public Cloud services, so do check back frequently.
 
