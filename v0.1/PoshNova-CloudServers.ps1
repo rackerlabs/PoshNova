@@ -906,9 +906,11 @@ function Remove-CloudServer {
         [Parameter(Position=2,Mandatory=$false)][string]$RegionOverride
         )
 
-    # Retrieving authentication token
-    Get-AuthToken($Account)
+    if ($RegionOverride){
+        $Global:RegionOverride = $RegionOverride
+    }
 
+    Get-AuthToken($Account)
     $URI = (Get-CloudURI("servers")) + "/servers/$ServerID"
 
     Invoke-RestMethod -Uri $URI -Headers $HeaderDictionary -Method Delete -ErrorAction Stop
@@ -917,7 +919,7 @@ function Remove-CloudServer {
         break;
     }
     else {
-        Write-Host "Your server has been scheduled for deletion. This action will take up to a minute to complete."
+        Write-Verbose "Your server has been scheduled for deletion. This action will take up to a minute to complete."
     }
 
 <#
