@@ -39,7 +39,7 @@ $Global:PoshNovaConfFile = $env:USERPROFILE + "\Documents\WindowsPowerShell\Modu
 function Get-CloudAccount {
     <#
     Read $Global:PoshNovaConfFile then populate global account variables 
-    based on value of $Global:account - ideally should have this as parameter!
+    based on value of $Global:account
     #>
 
     [CmdletBinding()]
@@ -69,7 +69,6 @@ function Get-CloudAccount {
         Invoke-Exception($_.Exception)
     }
 
-# NEED HELP TEXT HERE
 }
 
 function Get-AuthToken {
@@ -218,4 +217,25 @@ function Show-UntestedWarning {
     {
         Write-Host "`n --- Excellent, hang-on to your...`n"
     }
+}
+
+function Show-CloudAccounts {
+    Import-Csv $Global:PoshNovaConfFile | ft -AutoSize
+
+<#
+ .SYNOPSIS
+ Display all configured cloud accounts that are avaialble to use.
+
+ .DESCRIPTION
+ The Show-CloudAccounts cmdlet will simply display a list of all coud accounts, which have been configured in the $Global:PoshNovaConfFile.
+ 
+ .EXAMPLE
+ PS H:\> Show-CloudAccounts
+
+ AccountName CloudUsername  CloudAPIKey                      CloudDDI Region
+ ----------- -------------  -----------                      -------- ------
+ prod        cloudProd      awefsrw2w34rf214aff46d3b9a73c6b0 11111111 LON   
+ dev         cloudDev       9c2a200od18303ab763wt34gsd4bdb70 00000000 IAD 
+
+#>
 }
