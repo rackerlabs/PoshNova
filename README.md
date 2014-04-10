@@ -5,13 +5,14 @@ Current version `0.1`
 Authors:  
 Nielsen Pierce (nielsen.pierce@rackspace.co.uk)  
 Alexei Andreyev (alexei.andreyev@rackspace.co.uk)  
+Don Schenck (don.schenck@rackspace.com)
 
 ## Description
-PoshNova is a Microsoft PowerShell v3 script module intended for using directly with [Rackspace Public Cloud](http://www.rackspace.com/cloud/) API, which is built on OpenStack.
+PoshNova is a Microsoft PowerShell v3 script module intended for use directly with [Rackspace Public Cloud](http://www.rackspace.com/cloud/) API, which is built on OpenStack.
 
 The primary intention of this project is to provide an easy-to-use tool to manage and automate environments hosted on Rackspace Public Cloud for Windows system administrators, DevOps engineers and developers alike. 
 
-**The first version of this tool is in very early stages of development and cmndlet names and syntax is likely to change as the tools evolves, so please be aware of this when integrating it into your automation efforts.**
+**The first version of this tool is in very early stages of development and cmdlet names and syntax may change as the tools evolve, so please be aware of this when integrating them into your automation efforts.**
 
 ###History
 This effort is a rewrite of Mitch Robin's original PowerClient work, which was originally published on [developer.rackspace.com](http://developer.rackspace.com/blog/powerclient-rackspace-cloud-api-powershell-client.html)
@@ -20,15 +21,17 @@ This effort is a rewrite of Mitch Robin's original PowerClient work, which was o
 PoshNova is installed just like any other PowerShell module either in the system-wide module directory or user's home profile.
 
 ### Preparation
- - Ensure that Windows [Management Framework 3.0](http://www.microsoft.com/en-gb/download/details.aspx?id=34595) is installed on your machine, which includes PowerShell 3.0
- - Powershell Execution Policy must be set to RemoteSigned or Unrestricted (The module is unsigned at this time).
-  - Documents folder on local storage: <pre>Set-ExecutionPolicy RemoteSigned</pre>
-  - Documents folder on networked storage: <pre>Set-ExecutionPolicy Unrestricted</pre>
+ - Ensure that Windows [Management Framework 3.0](http://www.microsoft.com/en-gb/download/details.aspx?id=34595) (or newer) is installed on your machine, which includes PowerShell 3.0. To determine which version of Windows Management Framework is installed, open PowerShell and execute the following command and look for the value assigned to "WSManStackVersion" <pre>$PSVersionTable</pre>
+ - Determine the location of the curent users's Documents folder by executing the following PowerShell command:<pre>[Environment]::GetFolderPath("mydocuments")</pre> 
+ - Powershell Execution Policy must be set to RemoteSigned or Unrestricted (The module is unsigned at this time). Which setting you should use is based on the location of the "Documents" folder assigned to the current system user:
+ 
+  - If the Documents folder resides on local storage (e.g. C:\Users\foo\Documents): <pre>Set-ExecutionPolicy RemoteSigned</pre>
+  - If the Documents folder resides on networked storage: <pre>Set-ExecutionPolicy Unrestricted</pre>
   - Note: The above policy settings are quite permissive, so feel free to modify these to fit in your environment. See  `help about_Execution_Policies` for full details on this.
 
 ### Install process
-1.	Install all of the scripts in the module to `USERPROFILE\Documents\WindowsPowerShell\Modules\PoshNova\`. 
-	If `USERPROFILE\Documents\WindowsPowerShell` does not exist, execute the following command in a Powershell console: <pre>New-item –type file –force $profile</pre>
+1.	Copy all of the scripts in the module to `%USERPROFILE%\Documents\WindowsPowerShell\Modules\PoshNova\`. 
+	If `%USERPROFILE%\Documents\WindowsPowerShell` does not exist, execute the following command in a Powershell console: <pre>New-item –type file –force $profile</pre>
 
 2. 	Update CloudAccounts.csv file with your Cloud credentials:  
 	* *CloudName* - User-defined name for the account for easy identification (used as input for -Account parameter) 
@@ -134,7 +137,7 @@ Initial release has been tested to work with the following services, using the d
 	- Update-CloudLoadBalancerSessionPersistence
 	- Update-CloudLoadBalancerSSLTermination
 
-The tools is being constantly expanded to work with more Rackspace Public Cloud services, so do check back frequently.
+The tools are being constantly expanded to work with more Rackspace Public Cloud services, so check back frequently. Alternatively, you can follow the progress by watching it on GitHub at [https://github.com/rackerlabs/PoshNova](https://github.com/rackerlabs/PoshNova).
 
 ## Issues and getting help
 If you have any problems with the tool or would like to improve things, feel free to contact the authors or submit your changes for us to review. 
