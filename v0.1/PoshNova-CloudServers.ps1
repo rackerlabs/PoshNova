@@ -1,25 +1,3 @@
-<############################################################################################
-
-                           ___          _         __                
-                          / _ \___  ___| |__   /\ \ \_____   ____ _ 
-                         / /_)/ _ \/ __| '_ \ /  \/ / _ \ \ / / _` |
-                        / ___/ (_) \__ \ | | / /\  / (_) \ V / (_| |
-                        \/    \___/|___/_| |_\_\ \/ \___/ \_/ \__,_|
-                                                    NextGen Servers
-
-Authors
------------
-    Nielsen Pierce (nielsen.pierce@rackspace.co.uk)
-    Alexei Andreyev (alexei.andreyev@rackspace.co.uk)
-    
-Description
------------
-PowerShell v3 module for interaction with NextGen Rackspace Cloud API (PoshNova) 
-
-NextGen Servers v2.0 API reference
-----------------------------------
-http://docs.rackspace.com/servers/api/v2/cs-devguide/content/ch_preface.html
-
 ###################################################################################<############################################################################################
 
                            ___          _         __                
@@ -33,6 +11,7 @@ Authors
 -----------
     Nielsen Pierce (nielsen.pierce@rackspace.co.uk)
     Alexei Andreyev (alexei.andreyev@rackspace.co.uk)
+    Don Schenck (don.schenck@rackspace.com)
     
 Description
 -----------
@@ -409,7 +388,7 @@ function Add-CloudServer {
         [Parameter(Position=2,Mandatory=$true)][string]$ImageID = $(throw "Please specify the image ID with -ImageID parameter"),
         [Parameter(Position=3,Mandatory=$false)][array]$UserNetworks,
         [Parameter(Position=4,Mandatory=$true)][string]$Account = $(throw "Please specify required Cloud Account with -Account parameter"),
-        [Parameter(Position=5,Mandatory=$false)][string[]]$File,
+        [Parameter(Position=5,Mandatory=$false)][ValidateCount(0,5)][string[]]$File,
         [Parameter(Position=6,Mandatory=$false)][switch]$Isolated,
         [Parameter(Position=7,Mandatory=$false)][switch]$Deploy,
         [Parameter(Position=8,Mandatory=$false)][string]$RegionOverride
@@ -451,13 +430,13 @@ function Add-CloudServer {
     #Add injected file to request body if one is specified
     #
     if($File){
-		foreach ($fileName in $File) {
+        foreach ($fileName in $File) {
             $content = Get-Content -Path $($fileName.Split("=")[1]) -Encoding Byte
             $content64 = [System.Convert]::ToBase64String($Content)
             $path = $fileName.Split("=")[0]
             $object.server.personality += New-Object -TypeName PSCustomObject -Property @{"path"=$path;"contents"=$content64}
-			}
-		}
+        }
+    }
 		
     
     $JSONbody = $object | ConvertTo-Json -Depth 3
