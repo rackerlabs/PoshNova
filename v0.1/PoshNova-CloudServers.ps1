@@ -1,5 +1,4 @@
-###################################################################################<############################################################################################
-
+<############################################################################################
                            ___          _         __                
                           / _ \___  ___| |__   /\ \ \_____   ____ _ 
                          / /_)/ _ \/ __| '_ \ /  \/ / _ \ \ / / _` |
@@ -1439,7 +1438,7 @@ function Add-CloudServer {
     #
     if($UserNetworks){
             foreach ($uuid in $UserNetworks){
-                $object.server.networks += New-Object -TypeName PSCustomObject -Property @{"uuid"=$uuid}
+              $object.server.networks += New-Object -TypeName PSCustomObject -Property @{"uuid"=$uuid}
             }
         }
     
