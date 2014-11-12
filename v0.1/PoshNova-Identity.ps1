@@ -42,7 +42,9 @@ function Get-CloudIdentityUsers {
 
     $URI = (Get-CloudURI("identity")) + "users"
 
-    return (Invoke-RestMethod -Uri $URI  -Headers $HeaderDictionary -ErrorAction Stop).users
+    #return (Invoke-RestMethod -Uri $URI  -Headers $HeaderDictionary -ErrorAction Stop).users
+    $r = (Invoke-WebRequest -Uri $URI -Method GET -Headers $HeaderDictionary)|ConvertFrom-Json
+	return $r.users
 
 <#
  .SYNOPSIS
@@ -328,7 +330,8 @@ function Remove-CloudIdentityUser {
 
     $URI = (Get-CloudURI("identity")) + "users/$UserID"
 
-    Invoke-RestMethod -Uri $URI -Headers $HeaderDictionary -Method Delete -ErrorAction Stop
+    #Invoke-RestMethod -Uri $URI -Headers $HeaderDictionary -Method Delete -ErrorAction Stop
+    $r = (Invoke-WebRequest -Uri $URI -Method DELETE -Headers $HeaderDictionary)
 
 }
 
